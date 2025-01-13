@@ -293,6 +293,11 @@ make_move(P, B) :-
     asserta( board(B2) )
     .
 
+valid(B,S,E) :-
+    square(B,S,E),
+    Below is S + 3,
+    not(square(B,Below,E)).
+
 make_move2(human, P, B, B2) :-
     nl,
     nl,
@@ -300,9 +305,8 @@ make_move2(human, P, B, B2) :-
     write(P),
     write(' move? '),
     read(S),
-
     blank_mark(E),
-    square(B, S, E),
+    valid(B,S,E),
     player_mark(P, M),
     move(B, S, M, B2), !
     .
@@ -310,7 +314,7 @@ make_move2(human, P, B, B2) :-
 make_move2(human, P, B, B2) :-
     nl,
     nl,
-    write('Please select a numbered square.'),
+    write('Please select a valid entry.'),
     make_move2(human,P,B,B2)
     .
 
@@ -338,11 +342,27 @@ make_move2(computer, P, B, B2) :-
 % retrieves a list of available moves (empty squares) on a board.
 %
 
+% Base case: when N is greater than 9, the list of valid moves is empty
+find_valid_moves(_, N, _, []) :- N > 9, !.
+
+% Recursive case: check if the move is valid and add it to the list if it is
+find_valid_moves(B, N, E, [N|L]) :-
+    N =< 9,
+    valid(B, N, E), !,
+    N1 is N + 1,
+    find_valid_moves(B, N1, E, L).
+
+% Recursive case: skip the move if it is not valid
+find_valid_moves(B, N, E, L) :-
+    N =< 9,
+    N1 is N + 1,
+    find_valid_moves(B, N1, E, L).
+
 moves(B,L) :-
     not(win(B,x)),                %%% if either player already won, then there are no available moves
     not(win(B,o)),
     blank_mark(E),
-    findall(N, square(B,N,E), L), 
+    find_valid_moves(B,1,E,L),
     L \= []
     .
 
@@ -383,13 +403,15 @@ utility(B,U) :-
 
 minimax(D,[E,E,E, E,E,E, E,E,E],M,S,U) :-   
     blank_mark(E),
-    random_int_1n(9,S),
+    random_int_1n(3,S1),
+    S is S1 + 6,
     !
     .
 
 minimax(D,B,M,S,U) :-
     D2 is D + 1,
     moves(B,L),          %%% get the list of available moves
+    write(L),
     !,
     best(D2,B,M,L,S,U),  %%% recursively determine the best available move
     !
