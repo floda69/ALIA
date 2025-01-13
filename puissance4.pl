@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% CST 381 -– Artificial Intelligence
 %%% Robert Pinchbeck
-%%% Final Project 
+%%% Final Project
 %%% Due December 20, 2006
 %%% Source : http://www.robertpinchbeck.com/college/work/prolog/
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45,13 +45,13 @@ For predicates, the last variable is usually the "return" value.
 
 Predicates with a numeric suffix represent a "nested" predicate.
 
-e.g. myrule2(...) is meant to be called from myrule(...) 
+e.g. myrule2(...) is meant to be called from myrule(...)
      and myrule3(...) is meant to be called from myrule2(...)
 
 
 There are only two assertions that are used in this implementation
 
-asserta( board(B) ) - the current board 
+asserta( board(B) ) - the current board
 asserta( player(P, Type) ) - indicates which players are human/computer.
 
 */
@@ -69,7 +69,7 @@ inverse_mark('x', 'o'). %%% determines the opposite of the given mark
 inverse_mark('o', 'x').
 
 player_mark(1, 'x').    %%% the mark for the given player
-player_mark(2, 'o').    
+player_mark(2, 'o').
 
 opponent_mark(1, 'o').  %%% shorthand for the inverse mark of the given player
 opponent_mark(2, 'x').
@@ -80,9 +80,9 @@ maximizing('x').        %%% the player playing x is always trying to maximize th
 minimizing('o').        %%% the player playing o is always trying to minimize the utility of the board position
 
 corner_square(1, 1).    %%% map corner squares to board squares
-corner_square(2, 3).
-corner_square(3, 7).
-corner_square(4, 9).
+corner_square(2, 7).
+corner_square(3, 36).
+corner_square(4, 42).
 
 
 
@@ -111,7 +111,7 @@ hello :-
     nl,
     nl,
     nl,
-    write('Welcome to Tic-Tac-Toe.'),
+    write('Welcome to Connect 4.'),
     read_players,
     output_players
     .
@@ -119,7 +119,7 @@ hello :-
 initialize :-
     random_seed,          %%% use current time to initialize random number generator
     blank_mark(E),
-    asserta( board([E,E,E, E,E,E, E,E,E]) )  %%% create a blank board
+    asserta( board([E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E]) )  %%% create a blank board
     .
 
 goodbye :-
@@ -131,7 +131,7 @@ goodbye :-
     retract(board(_)),
     retract(player(_,_)),
     read_play_again(V), !,
-    (V == 'Y' ; V == 'y'), 
+    (V == 'Y' ; V == 'y'),
     !,
     run
     .
@@ -160,7 +160,7 @@ read_players :-
     set_players(N)
     .
 
-set_players(0) :- 
+set_players(0) :-
     asserta( player(1, computer) ),
     asserta( player(2, computer) ), !
     .
@@ -172,7 +172,7 @@ set_players(1) :-
     human_playing(M), !
     .
 
-set_players(2) :- 
+set_players(2) :-
     asserta( player(1, human) ),
     asserta( player(2, human) ), !
     .
@@ -184,13 +184,13 @@ set_players(N) :-
     .
 
 
-human_playing(M) :- 
+human_playing(M) :-
     (M == 'x' ; M == 'X'),
     asserta( player(1, human) ),
     asserta( player(2, computer) ), !
     .
 
-human_playing(M) :- 
+human_playing(M) :-
     (M == 'o' ; M == 'O'),
     asserta( player(1, computer) ),
     asserta( player(2, human) ), !
@@ -218,16 +218,8 @@ play(P) :-
 %.......................................
 % The mark in a square(N) corresponds to an item in a list, as follows:
 
-square([M,_,_,_,_,_,_,_,_],1,M).
-square([_,M,_,_,_,_,_,_,_],2,M).
-square([_,_,M,_,_,_,_,_,_],3,M).
-square([_,_,_,M,_,_,_,_,_],4,M).
-square([_,_,_,_,M,_,_,_,_],5,M).
-square([_,_,_,_,_,M,_,_,_],6,M).
-square([_,_,_,_,_,_,M,_,_],7,M).
-square([_,_,_,_,_,_,_,M,_],8,M).
-square([_,_,_,_,_,_,_,_,M],9,M).
-
+square(B, S, M) :-
+    nth1(S, B, M).
 
 %.......................................
 % win
@@ -280,7 +272,7 @@ game_over2(P, B) :-
 %.......................................
 % make_move
 %.......................................
-% requests next move from human/computer, 
+% requests next move from human/computer,
 % then applies that move to the given board
 %
 
@@ -342,7 +334,7 @@ moves(B,L) :-
     not(win(B,x)),                %%% if either player already won, then there are no available moves
     not(win(B,o)),
     blank_mark(E),
-    findall(N, square(B,N,E), L), 
+    findall(N, square(B,N,E), L),
     L \= []
     .
 
@@ -355,13 +347,13 @@ moves(B,L) :-
 
 utility(B,U) :-
     win(B,'x'),
-    U = 1, 
+    U = 1,
     !
     .
 
 utility(B,U) :-
     win(B,'o'),
-    U = (-1), 
+    U = (-1),
     !
     .
 
@@ -378,10 +370,10 @@ utility(B,U) :-
 
 % For the opening move against an optimal player, the best minimax can ever hope for is a tie.
 % So, technically speaking, any opening move is acceptable.
-% Save the user the trouble of waiting  for the computer to search the entire minimax tree 
+% Save the user the trouble of waiting  for the computer to search the entire minimax tree
 % by simply selecting a random square.
 
-minimax(D,[E,E,E, E,E,E, E,E,E],M,S,U) :-   
+minimax(D,[E,E,E, E,E,E, E,E,E],M,S,U) :-
     blank_mark(E),
     random_int_1n(9,S),
     !
@@ -395,11 +387,11 @@ minimax(D,B,M,S,U) :-
     !
     .
 
-% if there are no more available moves, 
+% if there are no more available moves,
 % then the minimax value is the utility of the given board position
 
 minimax(D,B,M,S,U) :-
-    utility(B,U)      
+    utility(B,U)
     .
 
 
@@ -413,8 +405,8 @@ minimax(D,B,M,S,U) :-
 
 best(D,B,M,[S1],S,U) :-
     move(B,S1,M,B2),        %%% apply that move to the board,
-    inverse_mark(M,M2), 
-    !,  
+    inverse_mark(M,M2),
+    !,
     minimax(D,B2,M2,_S,U),  %%% then recursively search for the utility value of that move.
     S = S1, !,
     output_value(D,S,U),
@@ -425,11 +417,11 @@ best(D,B,M,[S1],S,U) :-
 
 best(D,B,M,[S1|T],S,U) :-
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
-    inverse_mark(M,M2), 
+    inverse_mark(M,M2),
     !,
     minimax(D,B2,M2,_S,U1),      %%% recursively search for the utility value of that move,
     best(D,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
-    output_value(D,S1,U1),      
+    output_value(D,S1,U1),
     better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
@@ -453,14 +445,14 @@ better(D,M,S1,U1,S2,U2,     S,U) :-
     minimizing(M),                     %%% if the player is minimizing,
     U1 < U2,                           %%% then lesser is better.
     S = S1,
-    U = U1, 
+    U = U1,
     !
     .
 
 better(D,M,S1,U1,S2,U2,     S,U) :-
     U1 == U2,                          %%% if moves have equal utility,
     random_int_1n(10,R),               %%% then pick one of them at random
-    better2(D,R,M,S1,U1,S2,U2,S,U),    
+    better2(D,R,M,S1,U1,S2,U2,S,U),
     !
     .
 
@@ -480,7 +472,7 @@ better(D,M,S1,U1,S2,U2,     S,U) :-        %%% otherwise, second move is better
 better2(D,R,M,S1,U1,S2,U2,  S,U) :-
     R < 6,
     S = S1,
-    U = U1, 
+    U = U1,
     !
     .
 
@@ -496,7 +488,7 @@ better2(D,R,M,S1,U1,S2,U2,  S,U) :-
 %%% OUTPUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-output_players :- 
+output_players :-
     nl,
     player(1, V1),
     write('Player 1 is '),   %%% either human or computer
@@ -505,7 +497,7 @@ output_players :-
     nl,
     player(2, V2),
     write('Player 2 is '),   %%% either human or computer
-    write(V2), 
+    write(V2),
     !
     .
 
@@ -530,27 +522,23 @@ output_winner(B) :-
 output_board(B) :-
     nl,
     nl,
-    output_square(B,1),
-    write('|'),
-    output_square(B,2),
-    write('|'),
-    output_square(B,3),
-    nl,
-    write('-----------'),
-    nl,
-    output_square(B,4),
-    write('|'),
-    output_square(B,5),
-    write('|'),
-    output_square(B,6),
-    nl,
-    write('-----------'),
-    nl,
-    output_square(B,7),
-    write('|'),
-    output_square(B,8),
-    write('|'),
-    output_square(B,9), !
+    
+    forall(
+        between(1, 6, I), 
+        (
+            forall(
+                between(1, 7, J), 
+                (
+                    Index is 7 * (I - 1) + J,
+                    output_square(B, Index),
+                    write('|')
+                )
+            ), 
+            nl,
+            write('-----------------------------------'),
+            nl
+        )
+    ), !
     .
 
 output_board :-
@@ -560,17 +548,17 @@ output_board :-
 
 output_square(B,S) :-
     square(B,S,M),
-    write(' '), 
-    output_square2(S,M),  
+    write(' '),
+    output_square2(S,M),
     write(' '), !
     .
 
-output_square2(S, E) :- 
+output_square2(S, E) :-
     blank_mark(E),
-    write(S), !              %%% if square is empty, output the square number
+    format('~|~`0t~d~2+', S), 
     .
 
-output_square2(S, M) :- 
+output_square2(S, M) :-
     write(M), !              %%% if square is marked, output the mark
     .
 
@@ -583,14 +571,14 @@ output_value(D,S,U) :-
     write(U), !
     .
 
-output_value(D,S,U) :- 
+output_value(D,S,U) :-
     true
     .
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% PSEUDO-RANDOM NUMBERS 
+%%% PSEUDO-RANDOM NUMBERS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %.......................................
@@ -623,7 +611,7 @@ random_seed(N) :-
 
 arity_prolog___random_seed(N) :-
     nonvar(N),
-    randomize(N), 
+    randomize(N),
     !
     .
 
@@ -631,7 +619,7 @@ arity_prolog___random_seed(N) :-
     var(N),
     time(time(Hour,Minute,Second,Tick)),
     N is ( (Hour+1) * (Minute+1) * (Second+1) * (Tick+1)),
-    randomize(N), 
+    randomize(N),
     !
     .
 
@@ -655,7 +643,7 @@ random_int_1n(N, V) :-
 
 arity_prolog___random_int_1n(N, V) :-
     R is random,
-    V2 is (R * N) - 0.5,           
+    V2 is (R * N) - 0.5,
     float_text(V2,V3,fixed(0)),
     int_text(V4,V3),
     V is V4 + 1,
@@ -687,19 +675,19 @@ set_item(L, N, V, L2) :-
     set_item2(L, N, V, 1, L2)
         .
 
-set_item2( [], N, V, A, L2) :- 
-    N == -1, 
+set_item2( [], N, V, A, L2) :-
+    N == -1,
     L2 = []
     .
 
-set_item2( [_|T1], N, V, A, [V|T2] ) :- 
+set_item2( [_|T1], N, V, A, [V|T2] ) :-
     A = N,
     A1 is N + 1,
     set_item2( T1, -1, V, A1, T2 )
     .
 
-set_item2( [H|T1], N, V, A, [H|T2] ) :- 
-    A1 is A + 1, 
+set_item2( [H|T1], N, V, A, [H|T2] ) :-
+    A1 is A + 1,
     set_item2( T1, N, V, A1, T2 )
     .
 
@@ -714,12 +702,12 @@ get_item(L, N, V) :-
     get_item2(L, N, 1, V)
     .
 
-get_item2( [], _N, _A, V) :- 
+get_item2( [], _N, _A, V) :-
     V = [], !,
     fail
         .
 
-get_item2( [H|_T], N, A, V) :- 
+get_item2( [H|_T], N, A, V) :-
     A = N,
     V = H
     .
