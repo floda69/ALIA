@@ -739,6 +739,88 @@ get_item2( [_|T], N, A, V) :-
     get_item2( T, N, A1, V)
     .
 
+%.......................................
+% convert_board_vector_to_matrix
+%.......................................
+% Converts the list of the board (B) into a matrix (BM)
+% of dimension 6 rows * 7 columns
+
+convert_board_vector_to_matrix(B, R, C, BM) :-
+    length(B, Length),
+    Length =:= R * C,
+    split_into_rows(B, C, BM).
+
+% split the board (B) into rows (R), where each row has exactly C elements.
+split_into_rows([], _, []).
+split_into_rows(B, C, [R|T]) :-
+    length(R, C),
+    append(R, RestVector, B),
+    split_into_rows(RestVector, C, T).
+
+%.......................................
+% transpose
+%.......................................
+% transpose a non-squared matrix 
+% 
+
+transpose(M, [P|T]):-
+    first(M, P, A),
+    transpose(A, T).
+transpose(Empty, []):- empty(Empty).
+
+empty([[]|T]):-
+    empty(T).
+empty([[]]).
+
+first([[P|A]|R], [P|Ps], [A|As]):-
+    first(R, Ps, As).
+first([], [], []).
+
+%.......................................
+% diagonals
+%.......................................
+% Creates a matrix containing  all secondary diagonals of the matrix
+% with a length > Min
+% 
+
+% diagonals(Matrix, Min, Diagonals)
+% Trouve toutes les diagonales de longueur >= Min dans une matrice donnée.
+diagonals(Matrix, Min, Diagonals) :-
+    findall(Diagonal, (
+        diagonal(Matrix, Diagonal),
+        length(Diagonal, L),
+        L >= Min
+    ), Diagonals).
+
+% diagonal(Matrix, Diagonal)
+% Retourne une diagonale dans la matrice, dans les deux sens (principale et secondaire).
+diagonal(Matrix, Diagonal) :-
+    diagonal_down(Matrix, Diagonal). % Diagonales principales (haut-gauche à bas-droite).
+diagonal(Matrix, Diagonal) :-
+    diagonal_up(Matrix, Diagonal).   % Diagonales secondaires (haut-droite à bas-gauche).
+
+% diagonal_down(Matrix, Diagonal)
+% Trouve les diagonales principales (haut-gauche à bas-droite).
+diagonal_down(Matrix, Diagonal) :-
+    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
+    append(_, [Start|_], Row),            % Prend un élément (Start).
+    find_diagonal_down([Row|Rest], 1, Start, Diagonal).
+
+% find_diagonal_down(Matrix, Pos, Start, Diagonal)
+% Cherche une diagonale principale à partir d'un point donné.
+find_diagonal_down([], _, _, []).
+find_diagonal_down([Row|Rest], Pos, Start, [Start|Diagonal]) :-
+    nth1(Pos, Row, Start),                % Trouve Start dans la ligne courante.
+    NewPos is Pos + 1,                    % Passe à l'élément suivant en diagonale.
+    find_diagonal_down(Rest, NewPos, _, Diagonal).
+
+% diagonal_up(Matrix, Diagonal)
+% Trouve les diagonales secondaires (haut-droite à bas-gauche).
+diagonal_up(Matrix, Diagonal) :-
+    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
+    reverse(Row, RevRow),                  % Inverse la ligne.
+    append(_, [Start|_], RevRow),          % Prend un élément inversé (équivalent haut-droite).
+    find_diagonal_down([RevRow|Rest], 1, Start, Diagonal).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% End of program
