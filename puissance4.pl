@@ -28,11 +28,8 @@ T - the tail of a list
 For this implementation, these single letter variables represent:
 
 P - a player number (1 or 2)
-B - the board (a 42 item list representing a 6x7 matrix)
+B - the board (a 9 item list representing a 3x3 matrix)
     each "square" on the board can contain one of 3 values: x ,o, or e (for empty)
-BM  the board (a 6x7 matrix corresponding to B)
-TBM the board (a 7x6 matrix transposed of BM)
-DBM the "digonals" of the board containing each secondary and primary digonals of the board
 S - the number of a square on the board (1 - 9)
 M - a mark on a square (x or o)
 E - the mark used to represent an empty square ('e').
@@ -68,19 +65,19 @@ asserta( player(P, Type) ) - indicates which players are human/computer.
 next_player(1, 2).      %%% determines the next player after the given player
 next_player(2, 1).
 
-inverse_mark(' x', ' o'). %%% determines the opposite of the given mark
-inverse_mark(' o', ' x').
+inverse_mark('x', 'o'). %%% determines the opposite of the given mark
+inverse_mark('o', 'x').
 
-player_mark(1, ' x').    %%% the mark for the given player
-player_mark(2, ' o').
+player_mark(1, 'x').    %%% the mark for the given player
+player_mark(2, 'o').
 
-opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
-opponent_mark(2, ' x').
+opponent_mark(1, 'o').  %%% shorthand for the inverse mark of the given player
+opponent_mark(2, 'x').
 
 blank_mark('e').        %%% the mark used in an empty square
 
-maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
-minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
+maximizing('x').        %%% the player playing x is always trying to maximize the utility of the board position
+minimizing('o').        %%% the player playing o is always trying to minimize the utility of the board position
 
 corner_square(1, 1).    %%% map corner squares to board squares
 corner_square(2, 7).
@@ -230,27 +227,15 @@ square(B, S, M) :-
 % Players win by having their mark in one of the following square configurations:
 %
 
-win(B,M) :-
-    convert_board_vector_to_matrix(B, 6, 7, BM),
-    lignes_ok(M,BM);
-    transpose(TBM, BM),
-    lignes_ok(M,TBM);
-    diagonals(BM, 4, DBM),
-    lignes_ok(M,DBM).
+win([M,M,M, _,_,_, _,_,_],M).
+win([_,_,_, M,M,M, _,_,_],M).
+win([_,_,_, _,_,_, M,M,M],M).
+win([M,_,_, M,_,_, M,_,_],M).
+win([_,M,_, _,M,_, _,M,_],M).
+win([_,_,M, _,_,M, _,_,M],M).
+win([M,_,_, _,M,_, _,_,M],M).
+win([_,_,M, _,M,_, M,_,_],M).
 
-
-% checks for each line of BM if one is containing four consecutive tokens
-lignes_ok(V, [Ligne | _]) :-
-    ligne_ok(_, V, Ligne), !.
-
-lignes_ok(V, [_ | Reste]) :-
-    lignes_ok(V, Reste).
-
-ligne_ok(1, V, [V, V, V, V | _]).
-
-ligne_ok(I, V, [_| Q]) :-
-    ligne_ok(I1, V, Q),
-    I is I1 + 1.
 
 %.......................................
 % move
@@ -361,7 +346,7 @@ find_valid_moves(B, N, E, [N|L]) :-
 
 % Recursive case: skip the move if it is not valid
 find_valid_moves(B, N, E, L) :-
-    N =<42,
+    N =< 42,
     N1 is N + 1,
     find_valid_moves(B, N1, E, L).
 
@@ -408,11 +393,10 @@ utility(B,U) :-
 % Save the user the trouble of waiting  for the computer to search the entire minimax tree
 % by simply selecting a random square.
 
-minimax(D,[E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E ] ,M,S,U) :-
+minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E],M,S,U) :-
     blank_mark(E),
     random_int_1n(7,S1),
     S is S1 + 35,
-    write(S),
     !
     .
 
@@ -421,7 +405,7 @@ minimax(D,B,M,S,U) :-
     moves(B,L),          %%% get the list of available moves
     write(L),
     !,
-    best(D2,B,M,L,S,U),  %%% recursively determine the best available move
+    evaluate(D2,B,M,L,S,U),  %%% recursively determine the best available move
     !
     .
 
@@ -463,6 +447,136 @@ best(D,B,M,[S1|T],S,U) :-
     better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
+
+%.......................................
+% evaluate
+%.......................................
+% returns the evaluation of the board.
+
+% Count the number of aligned sequences of a given length for a player
+%count_aligned(B, Player, Length, Count) :-
+%    Count is 0,
+%    Box is 1,
+%    horizontal_sequence(B, Player, Length, Count, Box),
+%    vertical_sequence(B, Player, Length, Count, Box),
+%    diagonal_sequence(B, Player, Length, Count, Box)
+%    .
+
+% Check for horizontal sequences
+%horizontal_sequence(B, Player, Length, Count, Box) :-
+%    horizontal_check(B, Player, Length, Count, Box),
+%    Box =< 42,
+%    M is mod(Box, 7),
+%    ( M + Length >= 7 -> Box is box + 1 ; Box is Box + Length).
+%    horizontal_sequence(B, Player, Length, Count, NextBox).
+
+%horizontal_check(B, Player, Lenght, Count, Box) :-
+
+%horizontal_check(B, Player, 4, Count, Box) :-
+%    square(B, Box, Player),
+%    square(B, Box + 1, Player),
+%    square(B, Box + 2, Player),
+%    square(B, Box + 3, Player),
+%    Count is Count + 1.
+    
+%horizontal_check(B, Player, 3, Count, Box) :-
+%    square(B, Box, Player),
+%    square(B, Box + 1, Player),
+%    square(B, Box + 2, Player),
+%    Count is Count + 1.
+
+%horizontal_check(B, Player, 2, Count, Box) :-
+%    square(B, Box, Player),
+%    square(B, Box + 1, Player),
+%    Count is Count + 1.
+% filepath: /c:/Users/flofl/Documents/Cours/4IF/S1/ALIA/ALIA/puissance4.pl
+
+% Heuristic evaluation function for the Connect 4 board
+evaluate_heuristic(B, Player, Score) :-
+    count_aligned(B, Player, 4, FourInARow),
+    count_aligned(B, Player, 3, ThreeInARow),
+    count_aligned(B, Player, 2, TwoInARow),
+    center_control(B, Player, CenterControl),
+    Score is FourInARow * 1000 + ThreeInARow * 100 + TwoInARow * 10 + CenterControl.
+
+% Count the number of aligned sequences of a given length for a player
+count_aligned(B, Player, Length, Count) :-
+    findall(_, aligned_sequence(B, Player, Length), Sequences),
+    length(Sequences, Count).
+
+% Check for aligned sequences of a given length
+aligned_sequence(B, Player, Length) :-
+    horizontal_sequence(B, Player, Length);
+    vertical_sequence(B, Player, Length);
+    diagonal_sequence(B, Player, Length).
+
+% Check for horizontal sequences
+horizontal_sequence(B, Player, Length) :-
+    between(0, 5, Row),
+    Start is Row * 7,
+    End is Start + 7 - Length,
+    between(Start, End, Index),
+    check_sequence(B, Player, Index, 1, Length).
+
+% Check for vertical sequences
+vertical_sequence(B, Player, Length) :-
+    between(0, 6, Col),
+    End is 42 - (Length * 7) + Col,
+    between(Col, End, Index),
+    check_sequence(B, Player, Index, 7, Length).
+
+% Check for diagonal sequences (bottom-left to top-right)
+diagonal_sequence(B, Player, Length) :-
+    between(0, 2, Row),
+    between(0, 3, Col),
+    Index is Row * 7 + Col,
+    check_sequence(B, Player, Index, 8, Length).
+
+% Check for diagonal sequences (top-left to bottom-right)
+diagonal_sequence(B, Player, Length) :-
+    between(3, 5, Row),
+    between(0, 3, Col),
+    Index is Row * 7 + Col,
+    check_sequence(B, Player, Index, 6, Length).
+
+% Check if there is a sequence of a given length starting from an index with a given step
+check_sequence(B, Player, Index, Step, Length) :-
+    End is Index + Step * (Length - 1),
+    End < 42,
+    check_sequence_helper(B, Player, Index, Step, Length).
+
+check_sequence_helper(_, _, _, _, 0).
+check_sequence_helper(B, Player, Index, Step, Length) :-
+    nth0(Index, B, Player),
+    NextIndex is Index + Step,
+    NextLength is Length - 1,
+    check_sequence_helper(B, Player, NextIndex, Step, NextLength).
+
+% Calculate center control score
+center_control(B, Player, Score) :-
+    findall(Index, (between(3, 5, Row), Col is 3, Index is Row * 7 + Col, nth0(Index, B, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Example usage of the evaluation function
+evaluate(D, B, M, S, U) :-
+    evaluate_heuristic(B, M, U),
+    output_value(D, S, U).
+
+evaluate(D,B,M,[S1],S,U) :-
+    move(B,S1,M,B2),        %%% apply that move to the board,
+    evaluate(D,B2,M,S1,U),  %%% then evaluate the board position
+    S = S1, !,
+    output_value(D,S,U),
+    !
+    .
+
+evaluate(D,B,M,[S1|T],S,U) :-
+    move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
+    evaluate(D,B2,M,S1,U1),      %%% then evaluate the board position,
+    evaluate(D,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
+    output_value(D,S1,U1),
+    better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
+    .
 
 %.......................................
 % better
@@ -560,18 +674,18 @@ output_winner(B) :-
 output_board(B) :-
     nl,
     nl,
-
+    
     forall(
-        between(1, 6, I),
+        between(1, 6, I), 
         (
             forall(
-                between(1, 7, J),
+                between(1, 7, J), 
                 (
                     Index is 7 * (I - 1) + J,
                     output_square(B, Index),
                     write('|')
                 )
-            ),
+            ), 
             nl,
             write('-----------------------------------'),
             nl
@@ -593,7 +707,7 @@ output_square(B,S) :-
 
 output_square2(S, E) :-
     blank_mark(E),
-    format('~|~`0t~d~2+', S), !
+    format('~|~`0t~d~2+', S), 
     .
 
 output_square2(S, M) :-
@@ -755,88 +869,6 @@ get_item2( [_|T], N, A, V) :-
     get_item2( T, N, A1, V)
     .
 
-%.......................................
-% convert_board_vector_to_matrix
-%.......................................
-% Converts the list of the board (B) into a matrix (BM)
-% of dimension 6 rows * 7 columns
-
-convert_board_vector_to_matrix(B, R, C, BM) :-
-    length(B, Length),
-    Length =:= R * C,
-    split_into_rows(B, C, BM).
-
-% split the board (B) into rows (R), where each row has exactly C elements.
-split_into_rows([], _, []).
-split_into_rows(B, C, [R|T]) :-
-    length(R, C),
-    append(R, RestVector, B),
-    split_into_rows(RestVector, C, T).
-
-%.......................................
-% transpose
-%.......................................
-% transpose a non-squared matrix
-%
-
-transpose(M, [P|T]):-
-    first(M, P, A),
-    transpose(A, T).
-transpose(Empty, []):- empty(Empty).
-
-empty([[]|T]):-
-    empty(T).
-empty([[]]).
-
-first([[P|A]|R], [P|Ps], [A|As]):-
-    first(R, Ps, As).
-first([], [], []).
-
-%.......................................
-% diagonals
-%.......................................
-% Creates a matrix containing  all secondary diagonals of the matrix
-% with a length > Min
-%
-
-% diagonals(Matrix, Min, Diagonals)
-% Trouve toutes les diagonales de longueur >= Min dans une matrice donnée.
-diagonals(Matrix, Min, Diagonals) :-
-    findall(Diagonal, (
-        diagonal(Matrix, Diagonal),
-        length(Diagonal, L),
-        L >= Min
-    ), Diagonals).
-
-% diagonal(Matrix, Diagonal)
-% Retourne une diagonale dans la matrice, dans les deux sens (principale et secondaire).
-diagonal(Matrix, Diagonal) :-
-    diagonal_down(Matrix, Diagonal). % Diagonales principales (haut-gauche à bas-droite).
-diagonal(Matrix, Diagonal) :-
-    diagonal_up(Matrix, Diagonal).   % Diagonales secondaires (haut-droite à bas-gauche).
-
-% diagonal_down(Matrix, Diagonal)
-% Trouve les diagonales principales (haut-gauche à bas-droite).
-diagonal_down(Matrix, Diagonal) :-
-    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
-    append(_, [Start|_], Row),            % Prend un élément (Start).
-    find_diagonal_down([Row|Rest], 1, Start, Diagonal).
-
-% find_diagonal_down(Matrix, Pos, Start, Diagonal)
-% Cherche une diagonale principale à partir d'un point donné.
-find_diagonal_down([], _, _, []).
-find_diagonal_down([Row|Rest], Pos, Start, [Start|Diagonal]) :-
-    nth1(Pos, Row, Start),                % Trouve Start dans la ligne courante.
-    NewPos is Pos + 1,                    % Passe à l'élément suivant en diagonale.
-    find_diagonal_down(Rest, NewPos, _, Diagonal).
-
-% diagonal_up(Matrix, Diagonal)
-% Trouve les diagonales secondaires (haut-droite à bas-gauche).
-diagonal_up(Matrix, Diagonal) :-
-    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
-    reverse(Row, RevRow),                  % Inverse la ligne.
-    append(_, [Start|_], RevRow),          % Prend un élément inversé (équivalent haut-droite).
-    find_diagonal_down([RevRow|Rest], 1, Start, Diagonal).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% End of program
