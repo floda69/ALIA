@@ -65,19 +65,19 @@ asserta( player(P, Type) ) - indicates which players are human/computer.
 next_player(1, 2).      %%% determines the next player after the given player
 next_player(2, 1).
 
-inverse_mark('x', 'o'). %%% determines the opposite of the given mark
-inverse_mark('o', 'x').
+inverse_mark(' x', ' o'). %%% determines the opposite of the given mark
+inverse_mark(' o', ' x').
 
-player_mark(1, 'x').    %%% the mark for the given player
-player_mark(2, 'o').
+player_mark(1, ' x').    %%% the mark for the given player
+player_mark(2, ' o').
 
-opponent_mark(1, 'o').  %%% shorthand for the inverse mark of the given player
-opponent_mark(2, 'x').
+opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
+opponent_mark(2, ' x').
 
 blank_mark('e').        %%% the mark used in an empty square
 
-maximizing('x').        %%% the player playing x is always trying to maximize the utility of the board position
-minimizing('o').        %%% the player playing o is always trying to minimize the utility of the board position
+maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
+minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
 
 corner_square(1, 1).    %%% map corner squares to board squares
 corner_square(2, 7).
@@ -395,8 +395,8 @@ utility(B,U) :-
 
 minimax(D,[E,E,E, E,E,E, E,E,E],M,S,U) :-
     blank_mark(E),
-    random_int_1n(3,S1),
-    S is S1 + 6,
+    random_int_1n(7,S1),
+    S is S1 + 35,
     !
     .
 
@@ -577,7 +577,7 @@ output_square(B,S) :-
 
 output_square2(S, E) :-
     blank_mark(E),
-    format('~|~`0t~d~2+', S), 
+    format('~|~`0t~d~2+', S), !
     .
 
 output_square2(S, M) :-
