@@ -74,7 +74,7 @@ player_mark(2, ' o').
 opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
 opponent_mark(2, ' x').
 
-blank_mark('e').        %%% the mark used in an empty square
+blank_mark(' e').        %%% the mark used in an empty square
 
 maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
 minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
@@ -287,7 +287,7 @@ make_move(P, B) :-
 
 valid(B,S,E) :-
     square(B,S,E),
-    Below is S + 3,
+    Below is S + 7,
     not(square(B,Below,E)).
 
 make_move2(human, P, B, B2) :-
@@ -334,19 +334,19 @@ make_move2(computer, P, B, B2) :-
 % retrieves a list of available moves (empty squares) on a board.
 %
 
-% Base case: when N is greater than 9, the list of valid moves is empty
-find_valid_moves(_, N, _, []) :- N > 9, !.
+% Base case: when N is greater than 42, the list of valid moves is empty
+find_valid_moves(_, N, _, []) :- N > 42, !.
 
 % Recursive case: check if the move is valid and add it to the list if it is
 find_valid_moves(B, N, E, [N|L]) :-
-    N =< 9,
+    N =< 42,
     valid(B, N, E), !,
     N1 is N + 1,
     find_valid_moves(B, N1, E, L).
 
 % Recursive case: skip the move if it is not valid
 find_valid_moves(B, N, E, L) :-
-    N =< 9,
+    N =< 42,
     N1 is N + 1,
     find_valid_moves(B, N1, E, L).
 
@@ -366,13 +366,13 @@ moves(B,L) :-
 %
 
 utility(B,U) :-
-    win(B,'x'),
+    win(B,' x'),
     U = 1,
     !
     .
 
 utility(B,U) :-
-    win(B,'o'),
+    win(B,' o'),
     U = (-1),
     !
     .
@@ -393,7 +393,7 @@ utility(B,U) :-
 % Save the user the trouble of waiting  for the computer to search the entire minimax tree
 % by simply selecting a random square.
 
-minimax(D,[E,E,E, E,E,E, E,E,E],M,S,U) :-
+minimax(D,[E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E],M,S,U) :-
     blank_mark(E),
     random_int_1n(7,S1),
     S is S1 + 35,
