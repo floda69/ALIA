@@ -346,7 +346,7 @@ find_valid_moves(B, N, E, [N|L]) :-
 
 % Recursive case: skip the move if it is not valid
 find_valid_moves(B, N, E, L) :-
-    N =<42,
+    N =<429,
     N1 is N + 1,
     find_valid_moves(B, N1, E, L).
 
