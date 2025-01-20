@@ -28,8 +28,11 @@ T - the tail of a list
 For this implementation, these single letter variables represent:
 
 P - a player number (1 or 2)
-B - the board (a 9 item list representing a 3x3 matrix)
+B - the board (a 42 item list representing a 6x7 matrix)
     each "square" on the board can contain one of 3 values: x ,o, or e (for empty)
+BM  the board (a 6x7 matrix corresponding to B)
+TBM the board (a 7x6 matrix transposed of BM)
+DBM the "digonals" of the board containing each secondary and primary digonals of the board
 S - the number of a square on the board (1 - 9)
 M - a mark on a square (x or o)
 E - the mark used to represent an empty square ('e').
@@ -227,15 +230,27 @@ square(B, S, M) :-
 % Players win by having their mark in one of the following square configurations:
 %
 
-win([M,M,M, _,_,_, _,_,_],M).
-win([_,_,_, M,M,M, _,_,_],M).
-win([_,_,_, _,_,_, M,M,M],M).
-win([M,_,_, M,_,_, M,_,_],M).
-win([_,M,_, _,M,_, _,M,_],M).
-win([_,_,M, _,_,M, _,_,M],M).
-win([M,_,_, _,M,_, _,_,M],M).
-win([_,_,M, _,M,_, M,_,_],M).
+win(B,M) :-
+    convert_board_vector_to_matrix(B, 6, 7, BM),
+    lignes_ok(M,BM);
+    transpose(TBM, BM),
+    lignes_ok(M,TBM);
+    diagonals(BM, 4, DBM),
+    lignes_ok(M,DBM).
 
+
+% checks for each line of BM if one is containing four consecutive tokens
+lignes_ok(V, [Ligne | _]) :-
+    ligne_ok(_, V, Ligne), !.
+
+lignes_ok(V, [_ | Reste]) :-
+    lignes_ok(V, Reste).
+
+ligne_ok(1, V, [V, V, V, V | _]).
+
+ligne_ok(I, V, [_| Q]) :-
+    ligne_ok(I1, V, Q),
+    I is I1 + 1.
 
 %.......................................
 % move
