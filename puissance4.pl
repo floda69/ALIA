@@ -65,19 +65,19 @@ asserta( player(P, Type) ) - indicates which players are human/computer.
 next_player(1, 2).      %%% determines the next player after the given player
 next_player(2, 1).
 
-inverse_mark('x', 'o'). %%% determines the opposite of the given mark
-inverse_mark('o', 'x').
+inverse_mark(' x', ' o'). %%% determines the opposite of the given mark
+inverse_mark(' o', ' x').
 
-player_mark(1, 'x').    %%% the mark for the given player
-player_mark(2, 'o').
+player_mark(1, ' x').    %%% the mark for the given player
+player_mark(2, ' o').
 
-opponent_mark(1, 'o').  %%% shorthand for the inverse mark of the given player
-opponent_mark(2, 'x').
+opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
+opponent_mark(2, ' x').
 
 blank_mark('e').        %%% the mark used in an empty square
 
-maximizing('x').        %%% the player playing x is always trying to maximize the utility of the board position
-minimizing('o').        %%% the player playing o is always trying to minimize the utility of the board position
+maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
+minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
 
 corner_square(1, 1).    %%% map corner squares to board squares
 corner_square(2, 7).
@@ -403,7 +403,9 @@ minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,
 minimax(D,B,M,S,U) :-
     D2 is D + 1,
     moves(B,L),          %%% get the list of available moves
-    write(L),
+    write(D2),
+    write(L)
+    ,nl,
     !,
     evaluate(D2,B,M,L,S,U),  %%% recursively determine the best available move
     !
@@ -453,51 +455,17 @@ best(D,B,M,[S1|T],S,U) :-
 %.......................................
 % returns the evaluation of the board.
 
-% Count the number of aligned sequences of a given length for a player
-%count_aligned(B, Player, Length, Count) :-
-%    Count is 0,
-%    Box is 1,
-%    horizontal_sequence(B, Player, Length, Count, Box),
-%    vertical_sequence(B, Player, Length, Count, Box),
-%    diagonal_sequence(B, Player, Length, Count, Box)
-%    .
-
-% Check for horizontal sequences
-%horizontal_sequence(B, Player, Length, Count, Box) :-
-%    horizontal_check(B, Player, Length, Count, Box),
-%    Box =< 42,
-%    M is mod(Box, 7),
-%    ( M + Length >= 7 -> Box is box + 1 ; Box is Box + Length).
-%    horizontal_sequence(B, Player, Length, Count, NextBox).
-
-%horizontal_check(B, Player, Lenght, Count, Box) :-
-
-%horizontal_check(B, Player, 4, Count, Box) :-
-%    square(B, Box, Player),
-%    square(B, Box + 1, Player),
-%    square(B, Box + 2, Player),
-%    square(B, Box + 3, Player),
-%    Count is Count + 1.
-    
-%horizontal_check(B, Player, 3, Count, Box) :-
-%    square(B, Box, Player),
-%    square(B, Box + 1, Player),
-%    square(B, Box + 2, Player),
-%    Count is Count + 1.
-
-%horizontal_check(B, Player, 2, Count, Box) :-
-%    square(B, Box, Player),
-%    square(B, Box + 1, Player),
-%    Count is Count + 1.
-% filepath: /c:/Users/flofl/Documents/Cours/4IF/S1/ALIA/ALIA/puissance4.pl
-
 % Heuristic evaluation function for the Connect 4 board
-evaluate_heuristic(B, Player, Score) :-
-    count_aligned(B, Player, 4, FourInARow),
-    count_aligned(B, Player, 3, ThreeInARow),
-    count_aligned(B, Player, 2, TwoInARow),
-    center_control(B, Player, CenterControl),
-    Score is FourInARow * 1000 + ThreeInARow * 100 + TwoInARow * 10 + CenterControl.
+evaluate_heuristic(B, Player, Score) :-   %%% TODO enlever cette fct et mettre le code dans utility
+    count_aligned(B, ' x', 4, FourCrossInARow),
+    count_aligned(B, ' x', 3, ThreeCrossInARow),
+    count_aligned(B, ' x', 2, TwoCrossInARow),
+    center_control(B, ' x', CrossCenterControl),
+    count_aligned(B, ' o', 4, FourCircleInARow),
+    count_aligned(B, ' o', 3, ThreeCircleInARow),
+    count_aligned(B, ' o', 2, TwoCircleInARow),
+    center_control(B, ' o', CircleCenterControl),
+    Score is FourCrossInARow * 1000 - FourCrossInARow * FourCircleInARow + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
 
 % Count the number of aligned sequences of a given length for a player
 count_aligned(B, Player, Length, Count) :-
@@ -513,69 +481,95 @@ aligned_sequence(B, Player, Length) :-
 % Check for horizontal sequences
 horizontal_sequence(B, Player, Length) :-
     between(0, 5, Row),
-    Start is Row * 7,
-    End is Start + 7 - Length,
+    Start is Row * 7 +1,
+    End is Start + 7 +1 - Length,
     between(Start, End, Index),
     check_sequence(B, Player, Index, 1, Length).
 
 % Check for vertical sequences
 vertical_sequence(B, Player, Length) :-
-    between(0, 6, Col),
-    End is 42 - (Length * 7) + Col,
-    between(Col, End, Index),
+    End is 42 - (Length-1) * 7,
+    between(1, End, Index),
     check_sequence(B, Player, Index, 7, Length).
 
 % Check for diagonal sequences (bottom-left to top-right)
 diagonal_sequence(B, Player, Length) :-
-    between(0, 2, Row),
-    between(0, 3, Col),
+    between(0, 5, Row),
+    between(1, 7, Col),
     Index is Row * 7 + Col,
-    check_sequence(B, Player, Index, 8, Length).
+    check_sequence(B, Player, Index, 6, Length).
 
 % Check for diagonal sequences (top-left to bottom-right)
 diagonal_sequence(B, Player, Length) :-
-    between(3, 5, Row),
-    between(0, 3, Col),
+    between(0, 5, Row),
+    between(1, 7, Col),
     Index is Row * 7 + Col,
-    check_sequence(B, Player, Index, 6, Length).
+    check_sequence(B, Player, Index, 8, Length).
+
 
 % Check if there is a sequence of a given length starting from an index with a given step
 check_sequence(B, Player, Index, Step, Length) :-
     End is Index + Step * (Length - 1),
-    End < 42,
+    End < 43,
     check_sequence_helper(B, Player, Index, Step, Length).
 
 check_sequence_helper(_, _, _, _, 0).
 check_sequence_helper(B, Player, Index, Step, Length) :-
-    nth0(Index, B, Player),
+    square(B, Index, Player),
     NextIndex is Index + Step,
     NextLength is Length - 1,
     check_sequence_helper(B, Player, NextIndex, Step, NextLength).
 
 % Calculate center control score
 center_control(B, Player, Score) :-
-    findall(Index, (between(3, 5, Row), Col is 3, Index is Row * 7 + Col, nth0(Index, B, Player)), CenterPieces),
+    findall(Index, (between(0, 5, Row), between(3, 5, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
     length(CenterPieces, Score).
 
-% Example usage of the evaluation function
-evaluate(D, B, M, S, U) :-
-    evaluate_heuristic(B, M, U),
-    output_value(D, S, U).
 
-evaluate(D,B,M,[S1],S,U) :-
+evaluate(D, B, M, S, U) :-
+    evaluate_heuristic(B, M, U)
+    .
+
+evaluate(D,B,M,[S1],S,U) :- %%% one possible move
+    not(D==2),
     move(B,S1,M,B2),        %%% apply that move to the board,
-    evaluate(D,B2,M,S1,U),  %%% then evaluate the board position
-    S = S1, !,
-    output_value(D,S,U),
+    inverse_mark(M,M2),     %%% change player turn
+    !,
+    minimax(D,B2,M2,_S,U),      %%% recursively search for the utility value of that move,
+    S = S1,
+    output_value(D, S, U),
     !
     .
 
-evaluate(D,B,M,[S1|T],S,U) :-
+evaluate(2,B,M,[S1],S,U) :- %%% one possible move case occurence 2
+    move(B,S1,M,B2),        %%% apply that move to the board,
+    evaluate(2,B2,M,S1,U),  %%% then evaluate the board position
+    S = S1, !
+    .
+
+evaluate(2,B,M,[S1|T],S,U) :- %%% multiple possible moves case occurence 2
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
-    evaluate(D,B2,M,S1,U1),      %%% then evaluate the board position,
-    evaluate(D,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
-    output_value(D,S1,U1),
-    better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
+    evaluate(2,B2,M,S1,U1),      %%% then evaluate the board position,
+    evaluate(2,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
+    write(M),nl,
+    write(S1),write(' '),write(U1),nl,
+    better(2,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
+    write("best is "),write(S),write(' '),write(U),nl
+    .
+
+evaluate(D,B,M,[S1|T],S,U) :-    %%% multiple possible moves
+    not(D==2),
+    move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
+    inverse_mark(M,M2),          %%% change player turn
+    !,
+    minimax(D,B2,M2,_S,U1),      %%% recursively search for the utility value of that move,
+    evaluate(D,B,M,T,S2,U2),     %%% determine the best move of the remaining moves,
+    output_value(D, S1, U1),         
+    write(M),nl,
+    write(S1),write(' '),write(U1),nl,
+    better(D,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
+    write("best is "),write(S),write(' '),write(U),nl
+
     .
 
 %.......................................
@@ -707,7 +701,7 @@ output_square(B,S) :-
 
 output_square2(S, E) :-
     blank_mark(E),
-    format('~|~`0t~d~2+', S), 
+    format('~|~`0t~d~2+', S), !
     .
 
 output_square2(S, M) :-
