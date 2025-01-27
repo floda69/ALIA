@@ -556,6 +556,45 @@ utility(B, Score) :-
     center_control(B, ' o', CircleCenterControl),
     Score is FourCrossInARow * 1000 - FourCircleInARow * 1000 + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
 
+
+% Heuristic 2 evaluation function for the Connect 4 board
+utility2(B, Player, Score) :-  
+    detail1_center_control(B, ' x', CrossCenter1),
+    detail2_center_control(B, ' x', CrossCenter2),
+    detail3_center_control(B, ' x', CrossCenter3),
+    detail1_center_control(B, ' o', CircleCenter1),
+    detail2_center_control(B, ' o', CircleCenter2),
+    detail3_center_control(B, ' o', CircleCenter3),
+    Score is 3*CrossCenter1 + 2*CrossCenter2 + CrossCenter3 - 3*CircleCenter1 - 2*CircleCenter2 - CircleCenter3.
+
+
+% Heuristic 3 evaluation function for the Connect 4 board
+utility3(Board, Utility) :-
+    findall(Score, (block(Board, Block), evaluate_block(Board, Block, Score)), Scores),
+    sumlist(Scores, Utility).
+
+
+% Heuristic 4 evaluation function for the Connect 4 board
+utility4(B, Player, Score) :-  
+    matrix_control(B, ' x', CrossCenter1),
+    matrix2_control(B, ' x', CrossCenter2),
+    matrix3_control(B, ' x', CrossCenter3),
+    matrix4_control(B, ' x', CrossCenter4),
+    matrix5_control(B, ' x', CrossCenter5),
+    matrix_control(B, ' o', CircleCenter1),
+    matrix2_control(B, ' o', CircleCenter2),
+    matrix3_control(B, ' o', CircleCenter3),
+    matrix4_control(B, ' o', CircleCenter4),
+    matrix5_control(B, ' x', CircleCenter5),
+    Score is CrossCenter1 + CrossCenter2 + CrossCenter3 + CrossCenter4 + CrossCenter5 - CircleCenter1 - CircleCenter2 - CircleCenter3 - CircleCenter4 - CircleCenter5.
+
+
+%====================================================================
+%                 SOUS FONCTIONS DES UTILITY
+%====================================================================
+
+%UTILITY 1 SOUS FONCTIONS
+
 % Count the number of aligned sequences of a given length for a player
 count_aligned(B, Player, Length, Count) :-
     findall(_, aligned_sequence(B, Player, Length), Sequences),
@@ -595,7 +634,6 @@ diagonal_sequence(B, Player, Length) :-
     Index is Row * 7 + Col,
     check_sequence(B, Player, Index, 8, Length).
 
-
 % Check if there is a sequence of a given length starting from an index with a given step
 check_sequence(B, Player, Index, Step, Length) :-
     End is Index + Step * (Length - 1),
@@ -609,15 +647,34 @@ check_sequence_helper(B, Player, Index, Step, Length) :-
     NextLength is Length - 1,
     check_sequence_helper(B, Player, NextIndex, Step, NextLength).
 
-% Calculate center control score
+% Calculate center control score for utility1
 center_control(B, Player, Score) :-
     findall(Index, (between(0, 5, Row), between(3, 5, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
     length(CenterPieces, Score).
 
 
-utility3(Board, Utility) :-
-    findall(Score, (block(Board, Block), evaluate_block(Board, Block, Score)), Scores),
-    sumlist(Scores, Utility).
+
+
+%UTILITY 2 SOUS FONCTIONS
+
+
+% Calculate center control score on 2*1 center grid  for utility2
+detail1_center_control(B, Player, Score) :-
+    findall(Index, (between(2, 3, Row), Index is Row * 7 + 5, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 2*3 center grid for utility2
+detail2_center_control(B, Player, Score) :-
+    findall(Index, (between(2, 3, Row), between(3, 5, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 4*5 center grid for utility2
+detail3_center_control(B, Player, Score) :-
+    findall(Index, (between(1, 4, Row), between(2, 6, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+
+%UTILITY 3 SOUS FONCTIONS
 
 % Définir les blocs (combinaisons gagnantes possibles)
 block(Board, Block) :-
@@ -680,8 +737,40 @@ evaluate_block(Board, Block, Score) :-
 
 
 
+%UTILITY 4 SOUS FONCTIONS
+
+% Calculate center control score on 2*7 center grid for utility4
+matrix_control(B, Player, Score) :-
+    findall(Index, (between(2, 3, Row), between(1, 7, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 4*7 center grid for utility4
+matrix2_control(B, Player, Score) :-
+    findall(Index, (between(1, 4, Row), between(1, 7, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 6*1 center grid for utility4
+matrix3_control(B, Player, Score) :-
+    findall(Index, (between(1, 4, Row), Index is Row * 7 + 4, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 6*3 center grid for utility4
+matrix4_control(B, Player, Score) :-
+    findall(Index, (between(1, 4, Row), between(3, 5, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+% Calculate center control score on 6*5 center grid for utility4
+matrix5_control(B, Player, Score) :-
+    findall(Index, (between(1, 4, Row), between(2, 6, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+%====================================================================
+%                 evaluate
+%====================================================================
+
+
 evaluate(D, B, M, S, U) :-
-    (M == ' x' -> utility(B, U); utility(B, U))  % X utility function ; O utility function
+    (M == ' x' -> utility3(B, U); utility(B, U))  % X utility function ; O utility function
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
