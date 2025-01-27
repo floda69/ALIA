@@ -387,7 +387,7 @@ make_move2(computer, P, B, B2) :-
     nl,
     write('Computer is thinking about next move...'),
     player_mark(P, M),
-    minimax(0, B, M, S, U, 3),
+    minimax(0, B, M, S, U, 4),
     move(B,S,M,B2),
 
     nl,
@@ -475,9 +475,9 @@ minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,
 minimax(D,B,M,S,U,Limit) :-
     D2 is D + 1,
     moves(B,L),          %%% get the list of available moves
-    write(D2),
-    write(L)
-    ,nl,
+    %write(D2),
+    %write(L)
+    %,nl,
     !,
     evaluate(D2,B,M,L,S,U,Limit),  %%% recursively determine the best available move
     !
@@ -528,7 +528,7 @@ best(D,B,M,[S1|T],S,U) :-
 % returns the evaluation of the board.
 
 % Heuristic evaluation function for the Connect 4 board
-utility(B, Score) :-   %%% TODO enlever cette fct et mettre le code dans utility
+utility(B, Score) :-   
     count_aligned(B, ' x', 4, FourCrossInARow),
     count_aligned(B, ' x', 3, ThreeCrossInARow),
     count_aligned(B, ' x', 2, TwoCrossInARow),
@@ -623,10 +623,7 @@ evaluate(Limit,B,M,[S1|T],S,U,Limit) :- %%% multiple possible moves case occuren
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
     evaluate(Limit,B2,M,S1,U1),      %%% then evaluate the board position,
     evaluate(Limit,B,M,T,S2,U2,Limit),         %%% determine the best move of the remaining moves,
-    write(M),nl,
-    write(S1),write(' '),write(U1),nl,
-    better(Limit,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
-    write("best is "),write(S),write(' '),write(U),nl
+    better(Limit,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
 evaluate(D,B,M,[S1|T],S,U,Limit) :-    %%% multiple possible moves
@@ -637,11 +634,7 @@ evaluate(D,B,M,[S1|T],S,U,Limit) :-    %%% multiple possible moves
     minimax(D,B2,M2,_S,U1,Limit),      %%% recursively search for the utility value of that move,
     evaluate(D,B,M,T,S2,U2,Limit),     %%% determine the best move of the remaining moves,
     output_value(D, S1, U1),         
-    write(M),nl,
-    write(S1),write(' '),write(U1),nl,
-    better(D,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
-    write("best is "),write(S),write(' '),write(U),nl
-
+    better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
 %.......................................
