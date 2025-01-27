@@ -531,7 +531,7 @@ evaluate(D, B, M, S, U) :-
     .
 
 evaluate(D,B,M,[S1],S,U) :- %%% one possible move
-    not(D==4),
+    not(D==2),
     move(B,S1,M,B2),        %%% apply that move to the board,
     inverse_mark(M,M2),     %%% change player turn
     !,
