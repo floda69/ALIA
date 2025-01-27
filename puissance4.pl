@@ -547,18 +547,15 @@ best(D,B,M,[S1|T],S,U) :-
 % Heuristic evaluation function for the Connect 4 board
 utility(B, Score) :-   
     (
-    count_aligned(B, ' x', 4, FourCrossInARow), FourCrossInARow > 0 -> Score is 1000;
-    count_aligned(B, ' o', 4, FourCircleInARow), FourCircleInARow > 0 -> Score is -1000;
-
+    count_aligned(B, ' x', 4, FourCrossInARow),
     count_aligned(B, ' x', 3, ThreeCrossInARow),
     count_aligned(B, ' x', 2, TwoCrossInARow),
     center_control(B, ' x', CrossCenterControl),
-
+    count_aligned(B, ' o', 4, FourCircleInARow),
     count_aligned(B, ' o', 3, ThreeCircleInARow),
     count_aligned(B, ' o', 2, TwoCircleInARow),
     center_control(B, ' o', CircleCenterControl),
-    
-    Score is ThreeCrossInARow * 50 - ThreeCircleInARow * 50 + TwoCrossInARow * 5 - TwoCircleInARow * 5 + CrossCenterControl - CircleCenterControl
+    Score is FourCrossInARow * 1000 - FourCircleInARow * 1000 + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl
     ).
 
 
@@ -803,7 +800,6 @@ matrix5_control(B, Player, Score) :-
 
 evaluate(D, B, M, S, U) :-
     (M == ' x' -> utility(B, U); utility(B, U))  % O utility function then X utility function
-    utility3(B, U)
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
