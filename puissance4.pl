@@ -614,8 +614,73 @@ center_control(B, Player, Score) :-
     length(CenterPieces, Score).
 
 
+utility3(Board, Utility) :-
+    findall(Score, (block(Board, Block), evaluate_block(Board, Block, Score)), Scores),
+    sumlist(Scores, Utility).
+
+% Définir les blocs (combinaisons gagnantes possibles)
+block(Board, Block) :-
+    horizontal_block(Board, Block);
+    vertical_block(Board, Block);
+    diagonal_block(Board, Block).
+
+% Blocs horizontaux (alignements sur une ligne)
+horizontal_block(_, [A, B, C, D]) :-
+    between(1, 6, Row),                % Ligne de 1 à 6
+    StartIndex is (Row - 1) * 7 + 1,   % Début de la ligne
+    EndIndex is StartIndex + 3,        % Dernier index possible pour un bloc horizontal
+    between(StartIndex, EndIndex, A),  % Premier élément du bloc
+    B is A + 1, C is A + 2, D is A + 3,
+    valid_block([A, B, C, D]).
+
+% Blocs verticaux (alignements sur une colonne)
+vertical_block(_, [A, B, C, D]) :-
+    between(1, 7, Col),                % Colonne de 1 à 7
+    A is Col,
+    B is A + 7, C is B + 7, D is C + 7,
+    valid_block([A, B, C, D]).
+
+% Blocs diagonaux (gauche-droite et droite-gauche)
+diagonal_block(_, [A, B, C, D]) :-
+    between(1, 6, Row),                % Ligne de départ
+    between(1, 7, Col),                % Colonne de départ
+    StartIndex is (Row - 1) * 7 + Col, % Index de départ
+    (   % Diagonale descendante (gauche-droite)
+        B is StartIndex + 8,
+        C is B + 8,
+        D is C + 8
+    ;   % Diagonale montante (droite-gauche)
+        B is StartIndex + 6,
+        C is B + 6,
+        D is C + 6
+    ),
+    valid_block([A, B, C, D]).
+
+% Vérifie si un bloc contient uniquement des indices valides
+valid_block(Block) :-
+    length(Block, 4),              % Vérifie que le bloc contient 4 éléments
+    forall(member(Index, Block),   % Vérifie que chaque index est valide
+           (integer(Index), Index >= 1, Index =< 42)).
+
+% Évaluer un bloc
+evaluate_block(Board, Block, 0) :-
+    valid_block(Block), % Vérifie si les indices du bloc sont valides
+    findall(_, (member(Index, Block), nth1(Index, Board, 'x')), Xs),
+    findall(_, (member(Index, Block), nth1(Index, Board, 'o')), Os),
+    Xs \= [], Os \= [], !. % Score 0 si les deux joueurs ont des jetons
+
+evaluate_block(Board, Block, Score) :-
+    valid_block(Block), % Vérifie si les indices du bloc sont valides
+    findall('x', (member(Index, Block), nth1(Index, Board, 'x')), Xs),
+    findall('o', (member(Index, Block), nth1(Index, Board, 'o')), Os),
+    length(Xs, NumXs),
+    length(Os, NumOs),
+    Score is NumXs - NumOs.
+
+
+
 evaluate(D, B, M, S, U) :-
-    utility(B, U)
+    (M == ' x' -> utility(B, U); utility(B, U))  % X utility function ; O utility function
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
