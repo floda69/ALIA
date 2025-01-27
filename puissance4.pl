@@ -664,7 +664,7 @@ evaluate_block(Board, Block, Score) :-
 
 
 evaluate(D, B, M, S, U) :-
-    utility(B, U)
+    (M == ' x' -> utility(B, U); utility(B, U))  % X utility function ; O utility function
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
