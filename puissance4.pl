@@ -74,7 +74,7 @@ player_mark(2, ' o').
 opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
 opponent_mark(2, ' x').
 
-blank_mark('e').        %%% the mark used in an empty square
+blank_mark('  ').        %%% the mark used in an empty square
 
 maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
 minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
@@ -362,6 +362,10 @@ valid(B,S,E) :-
     Below is S + 7,
     not(square(B,Below,E)).
 
+valid2(V) :-
+    V >= 1,
+    V =< 7.
+
 make_move2(human, P, B, B2) :-
     nl,
     nl,
@@ -370,10 +374,22 @@ make_move2(human, P, B, B2) :-
     write(' move? '),
     read(S),
     blank_mark(E),
-    valid(B,S,E),
+    valid2(S),
+    find_cell_to_add(B,S,F),
+    valid(B,F,E),
     player_mark(P, M),
-    move(B, S, M, B2), !
+    move(B, F, M, B2), !
     .
+find_cell_to_add(B, S, F) :-
+    S =< 42,
+    S1 is S + 7,
+    square(B, S1, E),
+    blank_mark(E),
+    find_cell_to_add(B, S1, F)
+    .
+
+find_cell_to_add(_, S, S) :-
+    S =< 42.
 
 make_move2(human, P, B, B2) :-
     nl,
@@ -741,8 +757,6 @@ output_board(B) :-
                     write('|')
                 )
             ), 
-            nl,
-            write('-----------------------------------'),
             nl
         )
     ), !
@@ -762,7 +776,7 @@ output_square(B,S) :-
 
 output_square2(S, E) :-
     blank_mark(E),
-    format('~|~`0t~d~2+', S), !
+    write(E), !
     .
 
 output_square2(S, M) :-
