@@ -28,11 +28,8 @@ T - the tail of a list
 For this implementation, these single letter variables represent:
 
 P - a player number (1 or 2)
-B - the board (a 42 item list representing a 6x7 matrix)
+B - the board (a 9 item list representing a 3x3 matrix)
     each "square" on the board can contain one of 3 values: x ,o, or e (for empty)
-BM  the board (a 6x7 matrix corresponding to B)
-TBM the board (a 7x6 matrix transposed of BM)
-DBM the "digonals" of the board containing each secondary and primary digonals of the board
 S - the number of a square on the board (1 - 9)
 M - a mark on a square (x or o)
 E - the mark used to represent an empty square ('e').
@@ -280,6 +277,7 @@ diagonal2(Matrix, Diagonals, MinLength) :-
     reverse(Matrix, Reversed),
     findall(D, (extract_diagonal_top_left_to_bottom_right(Reversed, D), length(D, L), L >= MinLength), Diagonals).
 
+
 extract_diagonal_top_left_to_bottom_right(Matrix, Diagonal) :-
     nth0(RowStart, Matrix, _),
     extract_diagonal(RowStart, 0, Matrix, Diagonal).
@@ -420,7 +418,7 @@ find_valid_moves(B, N, E, [N|L]) :-
 
 % Recursive case: skip the move if it is not valid
 find_valid_moves(B, N, E, L) :-
-    N =<42,
+    N =< 42,
     N1 is N + 1,
     find_valid_moves(B, N1, E, L).
 
@@ -467,20 +465,21 @@ utility(B,U) :-
 % Save the user the trouble of waiting  for the computer to search the entire minimax tree
 % by simply selecting a random square.
 
-minimax(D,[E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E, E,E,E,E,E,E,E ] ,M,S,U) :-
+minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E],M,S,U) :-
     blank_mark(E),
     random_int_1n(7,S1),
     S is S1 + 35,
-    write(S),
     !
     .
 
 minimax(D,B,M,S,U) :-
     D2 is D + 1,
     moves(B,L),          %%% get the list of available moves
-    write(L),
+    write(D2),
+    write(L)
+    ,nl,
     !,
-    best(D2,B,M,L,S,U),  %%% recursively determine the best available move
+    evaluate(D2,B,M,L,S,U),  %%% recursively determine the best available move
     !
     .
 
@@ -522,6 +521,128 @@ best(D,B,M,[S1|T],S,U) :-
     better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
+
+%.......................................
+% evaluate
+%.......................................
+% returns the evaluation of the board.
+
+% Heuristic evaluation function for the Connect 4 board
+utility(B, Player, Score) :-   %%% TODO enlever cette fct et mettre le code dans utility
+    count_aligned(B, ' x', 4, FourCrossInARow),
+    count_aligned(B, ' x', 3, ThreeCrossInARow),
+    count_aligned(B, ' x', 2, TwoCrossInARow),
+    center_control(B, ' x', CrossCenterControl),
+    count_aligned(B, ' o', 4, FourCircleInARow),
+    count_aligned(B, ' o', 3, ThreeCircleInARow),
+    count_aligned(B, ' o', 2, TwoCircleInARow),
+    center_control(B, ' o', CircleCenterControl),
+    Score is FourCrossInARow * 1000 - FourCircleInARow * 1000 + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
+
+% Count the number of aligned sequences of a given length for a player
+count_aligned(B, Player, Length, Count) :-
+    findall(_, aligned_sequence(B, Player, Length), Sequences),
+    length(Sequences, Count).
+
+% Check for aligned sequences of a given length
+aligned_sequence(B, Player, Length) :-
+    horizontal_sequence(B, Player, Length);
+    vertical_sequence(B, Player, Length);
+    diagonal_sequence(B, Player, Length).
+
+% Check for horizontal sequences
+horizontal_sequence(B, Player, Length) :-
+    between(0, 5, Row),
+    Start is Row * 7 +1,
+    End is Start + 7 +1 - Length,
+    between(Start, End, Index),
+    check_sequence(B, Player, Index, 1, Length).
+
+% Check for vertical sequences
+vertical_sequence(B, Player, Length) :-
+    End is 42 - (Length-1) * 7,
+    between(1, End, Index),
+    check_sequence(B, Player, Index, 7, Length).
+
+% Check for diagonal sequences (bottom-left to top-right)
+diagonal_sequence(B, Player, Length) :-
+    between(0, 5, Row),
+    between(1, 7, Col),
+    Index is Row * 7 + Col,
+    check_sequence(B, Player, Index, 6, Length).
+
+% Check for diagonal sequences (top-left to bottom-right)
+diagonal_sequence(B, Player, Length) :-
+    between(0, 5, Row),
+    between(1, 7, Col),
+    Index is Row * 7 + Col,
+    check_sequence(B, Player, Index, 8, Length).
+
+
+% Check if there is a sequence of a given length starting from an index with a given step
+check_sequence(B, Player, Index, Step, Length) :-
+    End is Index + Step * (Length - 1),
+    End < 43,
+    check_sequence_helper(B, Player, Index, Step, Length).
+
+check_sequence_helper(_, _, _, _, 0).
+check_sequence_helper(B, Player, Index, Step, Length) :-
+    square(B, Index, Player),
+    NextIndex is Index + Step,
+    NextLength is Length - 1,
+    check_sequence_helper(B, Player, NextIndex, Step, NextLength).
+
+% Calculate center control score
+center_control(B, Player, Score) :-
+    findall(Index, (between(0, 5, Row), between(3, 5, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
+    length(CenterPieces, Score).
+
+
+evaluate(D, B, M, S, U) :-
+    utility(B, M, U)
+    .
+
+evaluate(D,B,M,[S1],S,U) :- %%% one possible move
+    not(D==2),
+    move(B,S1,M,B2),        %%% apply that move to the board,
+    inverse_mark(M,M2),     %%% change player turn
+    !,
+    minimax(D,B2,M2,_S,U),      %%% recursively search for the utility value of that move,
+    S = S1,
+    output_value(D, S, U),
+    !
+    .
+
+evaluate(2,B,M,[S1],S,U) :- %%% one possible move case occurence 2
+    move(B,S1,M,B2),        %%% apply that move to the board,
+    evaluate(2,B2,M,S1,U),  %%% then evaluate the board position
+    S = S1, !
+    .
+
+evaluate(2,B,M,[S1|T],S,U) :- %%% multiple possible moves case occurence 2
+    move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
+    evaluate(2,B2,M,S1,U1),      %%% then evaluate the board position,
+    evaluate(2,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
+    write(M),nl,
+    write(S1),write(' '),write(U1),nl,
+    better(2,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
+    write("best is "),write(S),write(' '),write(U),nl
+    .
+
+evaluate(D,B,M,[S1|T],S,U) :-    %%% multiple possible moves
+    not(D==2),
+    move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
+    inverse_mark(M,M2),          %%% change player turn
+    !,
+    minimax(D,B2,M2,_S,U1),      %%% recursively search for the utility value of that move,
+    evaluate(D,B,M,T,S2,U2),     %%% determine the best move of the remaining moves,
+    output_value(D, S1, U1),         
+    write(M),nl,
+    write(S1),write(' '),write(U1),nl,
+    better(D,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
+    write("best is "),write(S),write(' '),write(U),nl
+
+    .
 
 %.......................................
 % better
@@ -615,18 +736,18 @@ output_winner(_) :-
 output_board(B) :-
     nl,
     nl,
-
+    
     forall(
-        between(1, 6, I),
+        between(1, 6, I), 
         (
             forall(
-                between(1, 7, J),
+                between(1, 7, J), 
                 (
                     Index is 7 * (I - 1) + J,
                     output_square(B, Index),
                     write('|')
                 )
-            ),
+            ), 
             nl,
             write('-----------------------------------'),
             nl
@@ -806,8 +927,6 @@ get_item2( [H|_T], N, A, V) :-
 get_item2( [_|T], N, A, V) :-
     A1 is A + 1,
     get_item2( T, N, A1, V).
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% End of program
