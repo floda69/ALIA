@@ -456,7 +456,7 @@ best(D,B,M,[S1|T],S,U) :-
 % returns the evaluation of the board.
 
 % Heuristic evaluation function for the Connect 4 board
-evaluate_heuristic(B, Player, Score) :-   %%% TODO enlever cette fct et mettre le code dans utility
+utility(B, Player, Score) :-   %%% TODO enlever cette fct et mettre le code dans utility
     count_aligned(B, ' x', 4, FourCrossInARow),
     count_aligned(B, ' x', 3, ThreeCrossInARow),
     count_aligned(B, ' x', 2, TwoCrossInARow),
@@ -465,7 +465,7 @@ evaluate_heuristic(B, Player, Score) :-   %%% TODO enlever cette fct et mettre l
     count_aligned(B, ' o', 3, ThreeCircleInARow),
     count_aligned(B, ' o', 2, TwoCircleInARow),
     center_control(B, ' o', CircleCenterControl),
-    Score is FourCrossInARow * 1000 - FourCrossInARow * FourCircleInARow + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
+    Score is FourCrossInARow * 1000 - FourCircleInARow * 1000 + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
 
 % Count the number of aligned sequences of a given length for a player
 count_aligned(B, Player, Length, Count) :-
@@ -527,11 +527,11 @@ center_control(B, Player, Score) :-
 
 
 evaluate(D, B, M, S, U) :-
-    evaluate_heuristic(B, M, U)
+    utility(B, M, U)
     .
 
 evaluate(D,B,M,[S1],S,U) :- %%% one possible move
-    not(D==2),
+    not(D==4),
     move(B,S1,M,B2),        %%% apply that move to the board,
     inverse_mark(M,M2),     %%% change player turn
     !,
