@@ -230,6 +230,7 @@ square(B, S, M) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 win(B, M) :-
     convert_board_vector_to_matrix(B, 6, 7, BM),
+    print_matrix(BM),
     (   lignes_ok(M, BM)                      % Check rows
     ;   transpose(BM, TBM),                  % Check columns
         lignes_ok(M, TBM)
@@ -600,20 +601,16 @@ output_players :-
 
 
 output_winner(B) :-
-    win(B,x),
-    write('X wins.'),
-    !
-    .
+    win(B, ' x'),
+    write('X wins.'), nl.
 
 output_winner(B) :-
-    win(B,o),
-    write('O wins.'),
-    !
-    .
+    win(B, ' o'),
+    write('O wins.'), nl.
 
-output_winner(B) :-
-    write('No winner.')
-    .
+output_winner(_) :-
+    write('No winner.'), nl.
+
 
 
 output_board(B) :-
@@ -809,7 +806,7 @@ get_item2( [H|_T], N, A, V) :-
 
 get_item2( [_|T], N, A, V) :-
     A1 is A + 1,
-    get_item2( T, N, A1, V)
+    get_item2( T, N, A1, V).
 
 
 
