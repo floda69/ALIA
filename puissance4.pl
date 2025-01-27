@@ -598,15 +598,18 @@ center_control(B, Player, Score) :-
     length(CenterPieces, Score).
 
 
-utility3(Board, Utility) :-
-    findall(Score, (block(Board, Block), evaluate_block(Board, Block, Score)), Scores),
-    sumlist(Scores, Utility).
 
+% Fonction utility3
+utility3(B, Utility) :-
+    findall(Score, (block(B, Block), evaluate_block(B, Block, Score)), Scores),
+    sumlist(Scores, Utility).
+    
 % Définir les blocs (combinaisons gagnantes possibles)
-block(Board, Block) :-
-    horizontal_block(Board, Block);
-    vertical_block(Board, Block);
-    diagonal_block(Board, Block).
+block(B, Block) :-
+    horizontal_block(B, Block);
+    vertical_block(B, Block);
+    diagonal_montante(B, Block);
+    diagonal_descendante(B, Block).
 
 % Blocs horizontaux (alignements sur une ligne)
 horizontal_block(_, [A, B, C, D]) :-
@@ -614,57 +617,77 @@ horizontal_block(_, [A, B, C, D]) :-
     StartIndex is (Row - 1) * 7 + 1,   % Début de la ligne
     EndIndex is StartIndex + 3,        % Dernier index possible pour un bloc horizontal
     between(StartIndex, EndIndex, A),  % Premier élément du bloc
-    B is A + 1, C is A + 2, D is A + 3,
-    valid_block([A, B, C, D]).
+    B is A + 1, 
+    C is A + 2, 
+    D is A + 3.
 
 % Blocs verticaux (alignements sur une colonne)
 vertical_block(_, [A, B, C, D]) :-
     between(1, 7, Col),                % Colonne de 1 à 7
-    A is Col,
-    B is A + 7, C is B + 7, D is C + 7,
-    valid_block([A, B, C, D]).
+    between(1, 3, Row),                % Ligne de 1 à 3 (pour ne pas dépasser la grille)
+    A is (Row - 1) * 7 + Col,          
+    B is A + 7,                        
+    C is B + 7,                        
+    D is C + 7.       
 
-% Blocs diagonaux (gauche-droite et droite-gauche)
-diagonal_block(_, [A, B, C, D]) :-
-    between(1, 6, Row),                % Ligne de départ
-    between(1, 7, Col),                % Colonne de départ
-    StartIndex is (Row - 1) * 7 + Col, % Index de départ
-    (   % Diagonale descendante (gauche-droite)
-        B is StartIndex + 8,
-        C is B + 8,
-        D is C + 8
-    ;   % Diagonale montante (droite-gauche)
-        B is StartIndex + 6,
-        C is B + 6,
-        D is C + 6
-    ),
-    valid_block([A, B, C, D]).
+% Blocs diagonaux descendantes
+diagonal_descendante(_, [A, B, C, D]) :-
+    between(1, 4, Col),  
+    between(1, 3, Row),  
+    A is (Row - 1) * 7 + Col,  
+    B is A + 8,
+    C is B + 8,
+    D is C + 8. 
 
-% Vérifie si un bloc contient uniquement des indices valides
-valid_block(Block) :-
-    length(Block, 4),              % Vérifie que le bloc contient 4 éléments
-    forall(member(Index, Block),   % Vérifie que chaque index est valide
-           (integer(Index), Index >= 1, Index =< 42)).
+% Blocs diagonaux montantes
+diagonal_montante(_, [A, B, C, D]) :-
+    between(1, 4, Col),  
+    between(4, 6, Row),  
+    A is (Row - 1) * 7 + Col,  
+    B is A - 6,
+    C is B - 6,
+    D is C - 6. 
 
-% Évaluer un bloc
-evaluate_block(Board, Block, 0) :-
-    valid_block(Block), % Vérifie si les indices du bloc sont valides
-    findall(_, (member(Index, Block), nth1(Index, Board, 'x')), Xs),
-    findall(_, (member(Index, Block), nth1(Index, Board, 'o')), Os),
-    Xs \= [], Os \= [], !. % Score 0 si les deux joueurs ont des jetons
 
-evaluate_block(Board, Block, Score) :-
-    valid_block(Block), % Vérifie si les indices du bloc sont valides
-    findall('x', (member(Index, Block), nth1(Index, Board, 'x')), Xs),
-    findall('o', (member(Index, Block), nth1(Index, Board, 'o')), Os),
-    length(Xs, NumXs),
-    length(Os, NumOs),
-    Score is NumXs - NumOs.
+evaluate_block(Grid, BlockIndices, Score) :-
+    % Extraire les valeurs des indices correspondants depuis la grille.
+    maplist(extract_value(Grid), BlockIndices, BlockValues),
+    evaluate_block_values(BlockValues, Score).
+
+% Extraire une valeur de la grille à un indice donné.
+    extract_value(Grid, Index, Value) :-
+        nth1(Index, Grid, Value).
+
+% Évaluer un bloc de valeurs.
+evaluate_block_values(Block, 0) :-
+    % Un bloc contenant des jetons des deux joueurs vaut 0.
+    member(' x', Block),
+    member(' o', Block), !.
+
+evaluate_block_values(Block, Score) :-
+    % Calculer le nombre de jetons et de cases vides pour 'x' et 'o'.
+    count_occurrences(' x', Block, XTokens),
+    count_occurrences(' o', Block, OTokens),
+    count_occurrences('e', Block, EmptySpaces),
+    % Calculer une contribution non linéaire (exponentielle ici) pour 'x' et 'o'.
+    XContribution is XTokens * XTokens * 10,  % Progression quadratique pour 'x'.
+    OContribution is OTokens * OTokens * 10, % Progression quadratique pour 'o'.
+    % Les cases vides ajoutent un bonus constant à chaque bloc.
+    EmptyBonus is EmptySpaces * 2,
+    % Calculer le score comme la différence des contributions.
+    Score is (XContribution + EmptyBonus) - (OContribution + EmptyBonus).
+
+count_occurrences(_, [], 0).
+count_occurrences(Elem, [Elem|Rest], Count) :-
+    count_occurrences(Elem, Rest, RestCount),
+    Count is RestCount + 1.
+count_occurrences(Elem, [_|Rest], Count) :-
+    count_occurrences(Elem, Rest, Count).
 
 
 
 evaluate(D, B, M, S, U) :-
-    utility(B, U)
+    utility3(B, U)
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
