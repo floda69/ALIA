@@ -410,8 +410,9 @@ make_move2(computer, P, B, B2) :-
     nl,
     write('Computer places '),
     write(M),
-    write(' in square '),
-    write(S),
+    write(' in column '),
+    S2 is S mod 7,
+    write(S2),
     write('.')
     .
 
