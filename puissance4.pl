@@ -224,33 +224,92 @@ play(P) :-
 square(B, S, M) :-
     nth1(S, B, M).
 
-%.......................................
-% win
-%.......................................
-% Players win by having their mark in one of the following square configurations:
-%
 
-win(B,M) :-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% WINNING CONDITIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+win(B, M) :-
     convert_board_vector_to_matrix(B, 6, 7, BM),
-    lignes_ok(M,BM);
-    transpose(TBM, BM),
-    lignes_ok(M,TBM);
-    diagonals(BM, 4, DBM),
-    lignes_ok(M,DBM).
+    (   lignes_ok(M, BM)                      % Check rows
+    ;   transpose(BM, TBM),                  % Check columns
+        lignes_ok(M, TBM)
+    ;   diagonal(BM, 4, Diagonals),          % Check diagonals
+        lignes_ok(M, Diagonals)
+    ).
 
+% Convert board to matrix
+convert_board_vector_to_matrix(B, R, C, BM) :-
+    length(B, Length),
+    Length =:= R * C,
+    split_into_rows(B, C, BM).
 
-% checks for each line of BM if one is containing four consecutive tokens
-lignes_ok(V, [Ligne | _]) :-
-    ligne_ok(_, V, Ligne), !.
+% Split into rows
+split_into_rows([], _, []).
+split_into_rows(B, C, [R|T]) :-
+    length(R, C),
+    append(R, RestVector, B),
+    split_into_rows(RestVector, C, T).
 
-lignes_ok(V, [_ | Reste]) :-
-    lignes_ok(V, Reste).
+print_matrix([]).
+print_matrix([H|T]) :- write(H), nl, print_matrix(T).
 
-ligne_ok(1, V, [V, V, V, V | _]).
+% Transpose
+transpose([], []).
+transpose([F|Fs], Ts) :-
+    transpose_1(F, [F|Fs], Ts).
 
-ligne_ok(I, V, [_| Q]) :-
-    ligne_ok(I1, V, Q),
-    I is I1 + 1.
+transpose_1([], _, []).
+transpose_1([_|Rs], Ms, [Ts|Tss]) :-
+    lists_firsts_rests(Ms, Ts, Ms1),
+    transpose_1(Rs, Ms1, Tss).
+
+lists_firsts_rests([], [], []).
+lists_firsts_rests([[F|Os]|Rest], [F|Fs], [Os|Oss]) :-
+    lists_firsts_rests(Rest, Fs, Oss).
+
+% Diagonal extraction
+diagonal(Matrix, MinLength, Diagonals) :-
+    diagonal1(Matrix, D1, MinLength),
+    diagonal2(Matrix, D2, MinLength),
+    append(D1, D2, Diagonals).
+
+diagonal1(Matrix, Diagonals, MinLength) :-
+    findall(D, (extract_diagonal_top_left_to_bottom_right(Matrix, D), length(D, L), L >= MinLength), Diagonals).
+
+diagonal2(Matrix, Diagonals, MinLength) :-
+    reverse(Matrix, Reversed),
+    findall(D, (extract_diagonal_top_left_to_bottom_right(Reversed, D), length(D, L), L >= MinLength), Diagonals).
+
+extract_diagonal_top_left_to_bottom_right(Matrix, Diagonal) :-
+    nth0(RowStart, Matrix, _),
+    extract_diagonal(RowStart, 0, Matrix, Diagonal).
+
+extract_diagonal_top_left_to_bottom_right(Matrix, Diagonal) :-
+    nth0(0, Matrix, FirstRow),
+    nth0(ColStart, FirstRow, _),
+    ColStart > 0,
+    extract_diagonal(0, ColStart, Matrix, Diagonal).
+
+extract_diagonal(Row, Col, Matrix, [Element|Rest]) :-
+    nth0(Row, Matrix, CurrentRow),
+    nth0(Col, CurrentRow, Element),
+    Row1 is Row + 1,
+    Col1 is Col + 1,
+    extract_diagonal(Row1, Col1, Matrix, Rest).
+
+extract_diagonal(Row, Col, Matrix, []) :-
+    ( \+ nth0(Row, Matrix, _)
+    ; nth0(Row, Matrix, CurrentRow),
+      \+ nth0(Col, CurrentRow, _)
+    ).
+
+% Check rows or diagonals for identical values
+ligne_ok(V, [V, V, V, V | _]).
+ligne_ok(V, [_ | Q]) :- ligne_ok(V, Q).
+
+lignes_ok(V, [Ligne | _]) :- ligne_ok(V, Ligne).
+lignes_ok(V, [_ | Reste]) :- lignes_ok(V, Reste).
+
 
 %.......................................
 % move
@@ -381,13 +440,13 @@ moves(B,L) :-
 %
 
 utility(B,U) :-
-    win(B,'x'),
+    win(B,' x'),
     U = 1,
     !
     .
 
 utility(B,U) :-
-    win(B,'o'),
+    win(B,' o'),
     U = (-1),
     !
     .
@@ -541,20 +600,16 @@ output_players :-
 
 
 output_winner(B) :-
-    win(B,x),
-    write('X wins.'),
-    !
-    .
+    win(B, ' x'),
+    write('X wins.'), nl.
 
 output_winner(B) :-
-    win(B,o),
-    write('O wins.'),
-    !
-    .
+    win(B, ' o'),
+    write('O wins.'), nl.
 
-output_winner(B) :-
-    write('No winner.')
-    .
+output_winner(_) :-
+    write('No winner.'), nl.
+
 
 
 output_board(B) :-
@@ -698,8 +753,6 @@ arity_prolog___random_int_1n(N, V) :-
 member([V|T], V).
 member([_|T], V) :- member(T,V).
 
-append([], L, L).
-append([H|T1], L2, [H|T3]) :- append(T1, L2, T3).
 
 
 %.......................................
@@ -752,91 +805,9 @@ get_item2( [H|_T], N, A, V) :-
 
 get_item2( [_|T], N, A, V) :-
     A1 is A + 1,
-    get_item2( T, N, A1, V)
-    .
+    get_item2( T, N, A1, V).
 
-%.......................................
-% convert_board_vector_to_matrix
-%.......................................
-% Converts the list of the board (B) into a matrix (BM)
-% of dimension 6 rows * 7 columns
 
-convert_board_vector_to_matrix(B, R, C, BM) :-
-    length(B, Length),
-    Length =:= R * C,
-    split_into_rows(B, C, BM).
-
-% split the board (B) into rows (R), where each row has exactly C elements.
-split_into_rows([], _, []).
-split_into_rows(B, C, [R|T]) :-
-    length(R, C),
-    append(R, RestVector, B),
-    split_into_rows(RestVector, C, T).
-
-%.......................................
-% transpose
-%.......................................
-% transpose a non-squared matrix
-%
-
-transpose(M, [P|T]):-
-    first(M, P, A),
-    transpose(A, T).
-transpose(Empty, []):- empty(Empty).
-
-empty([[]|T]):-
-    empty(T).
-empty([[]]).
-
-first([[P|A]|R], [P|Ps], [A|As]):-
-    first(R, Ps, As).
-first([], [], []).
-
-%.......................................
-% diagonals
-%.......................................
-% Creates a matrix containing  all secondary diagonals of the matrix
-% with a length > Min
-%
-
-% diagonals(Matrix, Min, Diagonals)
-% Trouve toutes les diagonales de longueur >= Min dans une matrice donnée.
-diagonals(Matrix, Min, Diagonals) :-
-    findall(Diagonal, (
-        diagonal(Matrix, Diagonal),
-        length(Diagonal, L),
-        L >= Min
-    ), Diagonals).
-
-% diagonal(Matrix, Diagonal)
-% Retourne une diagonale dans la matrice, dans les deux sens (principale et secondaire).
-diagonal(Matrix, Diagonal) :-
-    diagonal_down(Matrix, Diagonal). % Diagonales principales (haut-gauche à bas-droite).
-diagonal(Matrix, Diagonal) :-
-    diagonal_up(Matrix, Diagonal).   % Diagonales secondaires (haut-droite à bas-gauche).
-
-% diagonal_down(Matrix, Diagonal)
-% Trouve les diagonales principales (haut-gauche à bas-droite).
-diagonal_down(Matrix, Diagonal) :-
-    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
-    append(_, [Start|_], Row),            % Prend un élément (Start).
-    find_diagonal_down([Row|Rest], 1, Start, Diagonal).
-
-% find_diagonal_down(Matrix, Pos, Start, Diagonal)
-% Cherche une diagonale principale à partir d'un point donné.
-find_diagonal_down([], _, _, []).
-find_diagonal_down([Row|Rest], Pos, Start, [Start|Diagonal]) :-
-    nth1(Pos, Row, Start),                % Trouve Start dans la ligne courante.
-    NewPos is Pos + 1,                    % Passe à l'élément suivant en diagonale.
-    find_diagonal_down(Rest, NewPos, _, Diagonal).
-
-% diagonal_up(Matrix, Diagonal)
-% Trouve les diagonales secondaires (haut-droite à bas-gauche).
-diagonal_up(Matrix, Diagonal) :-
-    append(_, [Row|Rest], Matrix),         % Prend une ligne (Row).
-    reverse(Row, RevRow),                  % Inverse la ligne.
-    append(_, [Start|_], RevRow),          % Prend un élément inversé (équivalent haut-droite).
-    find_diagonal_down([RevRow|Rest], 1, Start, Diagonal).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% End of program
