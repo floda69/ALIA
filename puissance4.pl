@@ -74,7 +74,7 @@ player_mark(2, ' o').
 opponent_mark(1, ' o').  %%% shorthand for the inverse mark of the given player
 opponent_mark(2, ' x').
 
-blank_mark('e').        %%% the mark used in an empty square
+blank_mark('  ').        %%% the mark used in an empty square
 
 maximizing(' x').        %%% the player playing x is always trying to maximize the utility of the board position
 minimizing(' o').        %%% the player playing o is always trying to minimize the utility of the board position
@@ -362,6 +362,10 @@ valid(B,S,E) :-
     Below is S + 7,
     not(square(B,Below,E)).
 
+valid2(V) :-
+    V >= 1,
+    V =< 7.
+
 make_move2(human, P, B, B2) :-
     nl,
     nl,
@@ -370,10 +374,22 @@ make_move2(human, P, B, B2) :-
     write(' move? '),
     read(S),
     blank_mark(E),
-    valid(B,S,E),
+    valid2(S),
+    find_cell_to_add(B,S,F),
+    valid(B,F,E),
     player_mark(P, M),
-    move(B, S, M, B2), !
+    move(B, F, M, B2), !
     .
+find_cell_to_add(B, S, F) :-
+    S =< 42,
+    S1 is S + 7,
+    square(B, S1, E),
+    blank_mark(E),
+    find_cell_to_add(B, S1, F)
+    .
+
+find_cell_to_add(_, S, S) :-
+    S =< 42.
 
 make_move2(human, P, B, B2) :-
     nl,
@@ -387,15 +403,16 @@ make_move2(computer, P, B, B2) :-
     nl,
     write('Computer is thinking about next move...'),
     player_mark(P, M),
-    minimax(0, B, M, S, U),
+    minimax(0, B, M, S, U, 4),
     move(B,S,M,B2),
 
     nl,
     nl,
     write('Computer places '),
     write(M),
-    write(' in square '),
-    write(S),
+    write(' in column '),
+    S2 is S mod 7,
+    write(S2),
     write('.')
     .
 
@@ -437,21 +454,21 @@ moves(B,L) :-
 % determines the value of a given board position
 %
 
-utility(B,U) :-
-    win(B,' x'),
-    U = 1,
-    !
-    .
+%utility(B,U) :-
+%    win(B,' x'),
+%    U = 1,
+%    !
+%    .
 
-utility(B,U) :-
-    win(B,' o'),
-    U = (-1),
-    !
-    .
+%utility(B,U) :-
+%    win(B,' o'),
+%    U = (-1),
+%    !
+%    .
 
-utility(B,U) :-
-    U = 0
-    .
+%utility(B,U) :-
+%    U = 0
+%    .
 
 
 %.......................................
@@ -465,28 +482,28 @@ utility(B,U) :-
 % Save the user the trouble of waiting  for the computer to search the entire minimax tree
 % by simply selecting a random square.
 
-minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E],M,S,U) :-
+minimax(D,[E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E,E, E,E,E, E,E,E, E,E,E,E,E, E,E,E, E,E],M,S,U,Limit) :-
     blank_mark(E),
-    random_int_1n(7,S1),
-    S is S1 + 35,
+    random_int_1n(3,S1),
+    S is S1 + 37,
     !
     .
 
-minimax(D,B,M,S,U) :-
+minimax(D,B,M,S,U,Limit) :-
     D2 is D + 1,
     moves(B,L),          %%% get the list of available moves
-    write(D2),
-    write(L)
-    ,nl,
+    %write(D2),
+    %write(L)
+    %,nl,
     !,
-    evaluate(D2,B,M,L,S,U),  %%% recursively determine the best available move
+    evaluate(D2,B,M,L,S,U,Limit),  %%% recursively determine the best available move
     !
     .
 
 % if there are no more available moves,
 % then the minimax value is the utility of the given board position
 
-minimax(D,B,M,S,U) :-
+minimax(D,B,M,S,U,Limit) :-
     utility(B,U)
     .
 
@@ -527,8 +544,8 @@ best(D,B,M,[S1|T],S,U) :-
 %.......................................
 % returns the evaluation of the board.
 
-% Heuristic 1 evaluation function for the Connect 4 board
-utility(B, Player, Score) :-  
+% Heuristic evaluation function for the Connect 4 board
+utility(B, Score) :-   
     count_aligned(B, ' x', 4, FourCrossInARow),
     count_aligned(B, ' x', 3, ThreeCrossInARow),
     count_aligned(B, ' x', 2, TwoCrossInARow),
@@ -539,6 +556,7 @@ utility(B, Player, Score) :-
     center_control(B, ' o', CircleCenterControl),
     Score is FourCrossInARow * 1000 - FourCircleInARow * 1000 + ThreeCrossInARow * 100 - ThreeCircleInARow * 100 + TwoCrossInARow * 10 - TwoCircleInARow * 10 + CrossCenterControl - CircleCenterControl .
 
+
 % Heuristic 2 evaluation function for the Connect 4 board
 utility2(B, Player, Score) :-  
     detail1_center_control(B, ' x', CrossCenter1),
@@ -548,6 +566,12 @@ utility2(B, Player, Score) :-
     detail2_center_control(B, ' o', CircleCenter2),
     detail3_center_control(B, ' o', CircleCenter3),
     Score is 3*CrossCenter1 + 2*CrossCenter2 + CrossCenter3 - 3*CircleCenter1 - 2*CircleCenter2 - CircleCenter3.
+
+
+% Heuristic 3 evaluation function for the Connect 4 board
+utility3(Board, Utility) :-
+    findall(Score, (block(Board, Block), evaluate_block(Board, Block, Score)), Scores),
+    sumlist(Scores, Utility).
 
 
 % Heuristic 4 evaluation function for the Connect 4 board
@@ -565,6 +589,11 @@ utility4(B, Player, Score) :-
     Score is CrossCenter1 + CrossCenter2 + CrossCenter3 + CrossCenter4 + CrossCenter5 - CircleCenter1 - CircleCenter2 - CircleCenter3 - CircleCenter4 - CircleCenter5.
 
 
+%====================================================================
+%                 SOUS FONCTIONS DES UTILITY
+%====================================================================
+
+%UTILITY 1 SOUS FONCTIONS
 
 % Count the number of aligned sequences of a given length for a player
 count_aligned(B, Player, Length, Count) :-
@@ -605,7 +634,6 @@ diagonal_sequence(B, Player, Length) :-
     Index is Row * 7 + Col,
     check_sequence(B, Player, Index, 8, Length).
 
-
 % Check if there is a sequence of a given length starting from an index with a given step
 check_sequence(B, Player, Index, Step, Length) :-
     End is Index + Step * (Length - 1),
@@ -626,6 +654,10 @@ center_control(B, Player, Score) :-
 
 
 
+
+%UTILITY 2 SOUS FONCTIONS
+
+
 % Calculate center control score on 2*1 center grid  for utility2
 detail1_center_control(B, Player, Score) :-
     findall(Index, (between(2, 3, Row), Index is Row * 7 + 5, square(B, Index, Player)), CenterPieces),
@@ -642,7 +674,70 @@ detail3_center_control(B, Player, Score) :-
     length(CenterPieces, Score).
 
 
+%UTILITY 3 SOUS FONCTIONS
 
+% Définir les blocs (combinaisons gagnantes possibles)
+block(Board, Block) :-
+    horizontal_block(Board, Block);
+    vertical_block(Board, Block);
+    diagonal_block(Board, Block).
+
+% Blocs horizontaux (alignements sur une ligne)
+horizontal_block(_, [A, B, C, D]) :-
+    between(1, 6, Row),                % Ligne de 1 à 6
+    StartIndex is (Row - 1) * 7 + 1,   % Début de la ligne
+    EndIndex is StartIndex + 3,        % Dernier index possible pour un bloc horizontal
+    between(StartIndex, EndIndex, A),  % Premier élément du bloc
+    B is A + 1, C is A + 2, D is A + 3,
+    valid_block([A, B, C, D]).
+
+% Blocs verticaux (alignements sur une colonne)
+vertical_block(_, [A, B, C, D]) :-
+    between(1, 7, Col),                % Colonne de 1 à 7
+    A is Col,
+    B is A + 7, C is B + 7, D is C + 7,
+    valid_block([A, B, C, D]).
+
+% Blocs diagonaux (gauche-droite et droite-gauche)
+diagonal_block(_, [A, B, C, D]) :-
+    between(1, 6, Row),                % Ligne de départ
+    between(1, 7, Col),                % Colonne de départ
+    StartIndex is (Row - 1) * 7 + Col, % Index de départ
+    (   % Diagonale descendante (gauche-droite)
+        B is StartIndex + 8,
+        C is B + 8,
+        D is C + 8
+    ;   % Diagonale montante (droite-gauche)
+        B is StartIndex + 6,
+        C is B + 6,
+        D is C + 6
+    ),
+    valid_block([A, B, C, D]).
+
+% Vérifie si un bloc contient uniquement des indices valides
+valid_block(Block) :-
+    length(Block, 4),              % Vérifie que le bloc contient 4 éléments
+    forall(member(Index, Block),   % Vérifie que chaque index est valide
+           (integer(Index), Index >= 1, Index =< 42)).
+
+% Évaluer un bloc
+evaluate_block(Board, Block, 0) :-
+    valid_block(Block), % Vérifie si les indices du bloc sont valides
+    findall(_, (member(Index, Block), nth1(Index, Board, 'x')), Xs),
+    findall(_, (member(Index, Block), nth1(Index, Board, 'o')), Os),
+    Xs \= [], Os \= [], !. % Score 0 si les deux joueurs ont des jetons
+
+evaluate_block(Board, Block, Score) :-
+    valid_block(Block), % Vérifie si les indices du bloc sont valides
+    findall('x', (member(Index, Block), nth1(Index, Board, 'x')), Xs),
+    findall('o', (member(Index, Block), nth1(Index, Board, 'o')), Os),
+    length(Xs, NumXs),
+    length(Os, NumOs),
+    Score is NumXs - NumOs.
+
+
+
+%UTILITY 4 SOUS FONCTIONS
 
 % Calculate center control score on 2*7 center grid for utility4
 matrix_control(B, Player, Score) :-
@@ -669,51 +764,48 @@ matrix5_control(B, Player, Score) :-
     findall(Index, (between(1, 4, Row), between(2, 6, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
     length(CenterPieces, Score).
 
+%====================================================================
+%                 evaluate
+%====================================================================
+
 
 evaluate(D, B, M, S, U) :-
-    utility2(B, M, U)
+    (M == ' x' -> utility3(B, U); utility(B, U))  % X utility function ; O utility function
     .
 
-evaluate(D,B,M,[S1],S,U) :- %%% one possible move
-    not(D==2),
+evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
+    not(D==Limit),
     move(B,S1,M,B2),        %%% apply that move to the board,
     inverse_mark(M,M2),     %%% change player turn
     !,
-    minimax(D,B2,M2,_S,U),      %%% recursively search for the utility value of that move,
+    minimax(D,B2,M2,_S,U,Limit),      %%% recursively search for the utility value of that move,
     S = S1,
     output_value(D, S, U),
     !
     .
 
-evaluate(2,B,M,[S1],S,U) :- %%% one possible move case occurence 2
+evaluate(Limit,B,M,[S1],S,U,Limit) :- %%% one possible move case occurence limit
     move(B,S1,M,B2),        %%% apply that move to the board,
-    evaluate(2,B2,M,S1,U),  %%% then evaluate the board position
+    evaluate(Limit,B2,M,S1,U),  %%% then evaluate the board position
     S = S1, !
     .
 
-evaluate(2,B,M,[S1|T],S,U) :- %%% multiple possible moves case occurence 2
+evaluate(Limit,B,M,[S1|T],S,U,Limit) :- %%% multiple possible moves case occurence limit
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
-    evaluate(2,B2,M,S1,U1),      %%% then evaluate the board position,
-    evaluate(2,B,M,T,S2,U2),         %%% determine the best move of the remaining moves,
-    write(M),nl,
-    write(S1),write(' '),write(U1),nl,
-    better(2,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
-    write("best is "),write(S),write(' '),write(U),nl
+    evaluate(Limit,B2,M,S1,U1),      %%% then evaluate the board position,
+    evaluate(Limit,B,M,T,S2,U2,Limit),         %%% determine the best move of the remaining moves,
+    better(Limit,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
-evaluate(D,B,M,[S1|T],S,U) :-    %%% multiple possible moves
-    not(D==2),
+evaluate(D,B,M,[S1|T],S,U,Limit) :-    %%% multiple possible moves
+    not(D==Limit),
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
     inverse_mark(M,M2),          %%% change player turn
     !,
-    minimax(D,B2,M2,_S,U1),      %%% recursively search for the utility value of that move,
-    evaluate(D,B,M,T,S2,U2),     %%% determine the best move of the remaining moves,
+    minimax(D,B2,M2,_S,U1,Limit),      %%% recursively search for the utility value of that move,
+    evaluate(D,B,M,T,S2,U2,Limit),     %%% determine the best move of the remaining moves,
     output_value(D, S1, U1),         
-    write(M),nl,
-    write(S1),write(' '),write(U1),nl,
-    better(D,M,S1,U1,S2,U2,S,U),  %%% and choose the better of the two moves (based on their respective utility values)
-    write("best is "),write(S),write(' '),write(U),nl
-
+    better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
 %.......................................
@@ -820,8 +912,6 @@ output_board(B) :-
                     write('|')
                 )
             ), 
-            nl,
-            write('-----------------------------------'),
             nl
         )
     ), !
@@ -841,7 +931,7 @@ output_square(B,S) :-
 
 output_square2(S, E) :-
     blank_mark(E),
-    format('~|~`0t~d~2+', S), !
+    write(E), !
     .
 
 output_square2(S, M) :-
