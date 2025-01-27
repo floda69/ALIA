@@ -487,7 +487,7 @@ minimax(D,B,M,S,U,Limit) :-
 % then the minimax value is the utility of the given board position
 
 minimax(D,B,M,S,U,Limit) :-
-    utility(B,U)
+    (M == ' x' -> utility(B, U); utility3(B, U))  % O utility function then X utility function
     .
 
 
@@ -664,7 +664,7 @@ evaluate_block(Board, Block, Score) :-
 
 
 evaluate(D, B, M, S, U) :-
-    (M == ' x' -> utility(B, U); utility(B, U))  % X utility function ; O utility function
+    (M == ' x' -> utility(B, U); utility3(B, U))  % O utility function then X utility function
     .
 
 evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
