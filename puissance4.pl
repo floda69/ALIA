@@ -221,20 +221,92 @@ play(P) :-
 square(B, S, M) :-
     nth1(S, B, M).
 
-%.......................................
-% win
-%.......................................
-% Players win by having their mark in one of the following square configurations:
-%
 
-win([M,M,M, _,_,_, _,_,_],M).
-win([_,_,_, M,M,M, _,_,_],M).
-win([_,_,_, _,_,_, M,M,M],M).
-win([M,_,_, M,_,_, M,_,_],M).
-win([_,M,_, _,M,_, _,M,_],M).
-win([_,_,M, _,_,M, _,_,M],M).
-win([M,_,_, _,M,_, _,_,M],M).
-win([_,_,M, _,M,_, M,_,_],M).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% WINNING CONDITIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+win(B, M) :-
+    convert_board_vector_to_matrix(B, 6, 7, BM),
+    (   lignes_ok(M, BM)                      % Check rows
+    ;   transpose(BM, TBM),                  % Check columns
+        lignes_ok(M, TBM)
+    ;   diagonal(BM, 4, Diagonals),          % Check diagonals
+        lignes_ok(M, Diagonals)
+    ).
+
+% Convert board to matrix
+convert_board_vector_to_matrix(B, R, C, BM) :-
+    length(B, Length),
+    Length =:= R * C,
+    split_into_rows(B, C, BM).
+
+% Split into rows
+split_into_rows([], _, []).
+split_into_rows(B, C, [R|T]) :-
+    length(R, C),
+    append(R, RestVector, B),
+    split_into_rows(RestVector, C, T).
+
+print_matrix([]).
+print_matrix([H|T]) :- write(H), nl, print_matrix(T).
+
+% Transpose
+transpose([], []).
+transpose([F|Fs], Ts) :-
+    transpose_1(F, [F|Fs], Ts).
+
+transpose_1([], _, []).
+transpose_1([_|Rs], Ms, [Ts|Tss]) :-
+    lists_firsts_rests(Ms, Ts, Ms1),
+    transpose_1(Rs, Ms1, Tss).
+
+lists_firsts_rests([], [], []).
+lists_firsts_rests([[F|Os]|Rest], [F|Fs], [Os|Oss]) :-
+    lists_firsts_rests(Rest, Fs, Oss).
+
+% Diagonal extraction
+diagonal(Matrix, MinLength, Diagonals) :-
+    diagonal1(Matrix, D1, MinLength),
+    diagonal2(Matrix, D2, MinLength),
+    append(D1, D2, Diagonals).
+
+diagonal1(Matrix, Diagonals, MinLength) :-
+    findall(D, (extract_diagonal_top_left_to_bottom_right(Matrix, D), length(D, L), L >= MinLength), Diagonals).
+
+diagonal2(Matrix, Diagonals, MinLength) :-
+    reverse(Matrix, Reversed),
+    findall(D, (extract_diagonal_top_left_to_bottom_right(Reversed, D), length(D, L), L >= MinLength), Diagonals).
+
+
+extract_diagonal_top_left_to_bottom_right(Matrix, Diagonal) :-
+    nth0(RowStart, Matrix, _),
+    extract_diagonal(RowStart, 0, Matrix, Diagonal).
+
+extract_diagonal_top_left_to_bottom_right(Matrix, Diagonal) :-
+    nth0(0, Matrix, FirstRow),
+    nth0(ColStart, FirstRow, _),
+    ColStart > 0,
+    extract_diagonal(0, ColStart, Matrix, Diagonal).
+
+extract_diagonal(Row, Col, Matrix, [Element|Rest]) :-
+    nth0(Row, Matrix, CurrentRow),
+    nth0(Col, CurrentRow, Element),
+    Row1 is Row + 1,
+    Col1 is Col + 1,
+    extract_diagonal(Row1, Col1, Matrix, Rest).
+
+extract_diagonal(Row, Col, Matrix, []) :-
+    ( \+ nth0(Row, Matrix, _)
+    ; nth0(Row, Matrix, CurrentRow),
+      \+ nth0(Col, CurrentRow, _)
+    ).
+
+% Check rows or diagonals for identical values
+ligne_ok(V, [V, V, V, V | _]).
+ligne_ok(V, [_ | Q]) :- ligne_ok(V, Q).
+
+lignes_ok(V, [Ligne | _]) :- ligne_ok(V, Ligne).
+lignes_ok(V, [_ | Reste]) :- lignes_ok(V, Reste).
 
 
 %.......................................
@@ -366,13 +438,13 @@ moves(B,L) :-
 %
 
 utility(B,U) :-
-    win(B,'x'),
+    win(B,' x'),
     U = 1,
     !
     .
 
 utility(B,U) :-
-    win(B,'o'),
+    win(B,' o'),
     U = (-1),
     !
     .
@@ -649,20 +721,16 @@ output_players :-
 
 
 output_winner(B) :-
-    win(B,x),
-    write('X wins.'),
-    !
-    .
+    win(B, ' x'),
+    write('X wins.'), nl.
 
 output_winner(B) :-
-    win(B,o),
-    write('O wins.'),
-    !
-    .
+    win(B, ' o'),
+    write('O wins.'), nl.
 
-output_winner(B) :-
-    write('No winner.')
-    .
+output_winner(_) :-
+    write('No winner.'), nl.
+
 
 
 output_board(B) :-
@@ -806,8 +874,6 @@ arity_prolog___random_int_1n(N, V) :-
 member([V|T], V).
 member([_|T], V) :- member(T,V).
 
-append([], L, L).
-append([H|T1], L2, [H|T3]) :- append(T1, L2, T3).
 
 
 %.......................................
@@ -860,9 +926,7 @@ get_item2( [H|_T], N, A, V) :-
 
 get_item2( [_|T], N, A, V) :-
     A1 is A + 1,
-    get_item2( T, N, A1, V)
-    .
-
+    get_item2( T, N, A1, V).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% End of program
