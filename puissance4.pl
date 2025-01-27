@@ -230,7 +230,6 @@ square(B, S, M) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 win(B, M) :-
     convert_board_vector_to_matrix(B, 6, 7, BM),
-    print_matrix(BM),
     (   lignes_ok(M, BM)                      % Check rows
     ;   transpose(BM, TBM),                  % Check columns
         lignes_ok(M, TBM)
