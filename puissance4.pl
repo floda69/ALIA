@@ -88,12 +88,52 @@ corner_square(4, 42).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%     MAIN PROGRAM
+%%%     HTTP EXPERIMENTAL PROGRAM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
+
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_json)).
+:- use_module(library(http/http_parameters)).
+
+:- http_handler(root(play), handle_play, []).
+:- http_handler(root(init), handle_init, []).
+
+server(Port) :-
+    http_server(http_dispatch, [port(Port)]).
+
+handle_init(Request) :-
+    http_parameters(Request, [players(NbJoueur, [integer]), team(Team, [optional(true)])]),
+    (   var(Team)
+    ->  hello(NbJoueur)
+    ;   hello(NbJoueur, Team)
+    ),
+    reply_json_dict(_{status: 'initialized'}).
+
+start_server :-
+    Port = 8080, % You can change the port number if needed
+    server(Port),
+    format('Server started on port ~w~n', [Port]).
+
+handle_play(Request) :-
+    http_parameters(Request, [player(Player, [integer]), move(Move, [integer])]),
+    play_move(Player, Move),
+    reply_json_dict(_{status: 'move played'}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%     MAIN PROGRAM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
 
+run(NbJoueur) :-
+    hello(NbJoueur),          %%% Display welcome message, initialize game
 
-run :-
-    hello,          %%% Display welcome message, initialize game
+    play(1),        %%% Play the game starting with player 1
+
+    goodbye         %%% Display end of game message
+    .
+
+run(NbJoueur, Team) :-
+    hello(NbJoueur, Team),          %%% Display welcome message, initialize game
 
     play(1),        %%% Play the game starting with player 1
 
@@ -105,6 +145,28 @@ run :-
     .
 
 
+hello(NbJoueur) :-
+    initialize,
+%    cls,
+    nl,
+    nl,
+    nl,
+    write('Welcome to Connect 4.'),
+    set_players(NbJoueur),
+    output_players
+    .
+
+hello(NbJoueur, Team) :-
+    initialize,
+%    cls,
+    nl,
+    nl,
+    nl,
+    write('Welcome to Connect 4.'),
+    set_players(NbJoueur, Team),
+    output_players
+    .
+
 hello :-
     initialize,
 %    cls,
@@ -112,7 +174,7 @@ hello :-
     nl,
     nl,
     write('Welcome to Connect 4.'),
-    read_players,
+    set_players(NbJoueur),
     output_players
     .
 
@@ -165,13 +227,6 @@ set_players(0) :-
     asserta( player(2, computer) ), !
     .
 
-set_players(1) :-
-    nl,
-    write('Is human playing X or O (X moves first)? '),
-    read(M),
-    human_playing(M), !
-    .
-
 set_players(2) :-
     asserta( player(1, human) ),
     asserta( player(2, human) ), !
@@ -183,6 +238,10 @@ set_players(N) :-
     read_players
     .
 
+set_players(1, Team) :-
+    nl,
+    human_playing(Team), !
+    .
 
 human_playing(M) :-
     (M == 'x' ; M == 'X'),
@@ -211,6 +270,14 @@ play(P) :-
     next_player(P, P2), !,
     play(P2), !
     .
+
+play_move(P, Move) :-
+    board(B), !,
+    output_board(B), !,
+    not(game_over(P, B)), !,
+    make_move(P, B, Move), !,
+    .
+
 
 
 %.......................................
@@ -357,6 +424,16 @@ make_move(P, B) :-
     asserta( board(B2) )
     .
 
+make_move(P, B, Move) :-
+    write('move from sever'),
+    player(P, Type),
+
+    make_move2(Type, P, B, B2,Move), % C'est là que ça marche plus
+
+    retract( board(_) ),
+    asserta( board(B2) )
+    .
+
 valid(B,S,E) :-
     square(B,S,E),
     Below is S + 7,
@@ -397,6 +474,28 @@ make_move2(computer, P, B, B2) :-
     write(' in square '),
     write(S),
     write('.')
+    .
+
+
+
+
+make_move2(human, P, B, Move, B2) :-
+    nl,
+    nl,
+    write('Player '),
+    write(P),
+    write(' move? '),
+    blank_mark(E),
+    valid(B,Move,E),
+    player_mark(P, M),
+    move(B, Move, M, B2), !
+    .
+
+make_move2(human, P, B, B2) :-
+    nl,
+    nl,
+    write('Please select a valid entry.'),
+    make_move2(human,P,B,B2, Move)
     .
 
 
