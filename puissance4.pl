@@ -929,22 +929,27 @@ output_winner(_) :-
 output_board(B) :-
     nl,
     nl,
-    
     forall(
         between(1, 6, I), 
         (
+            write('|'),
             forall(
+
                 between(1, 7, J), 
                 (
                     Index is 7 * (I - 1) + J,
                     output_square(B, Index),
                     write('|')
                 )
-            ), 
+            ),
             nl
         )
-    ), !
-    .
+    ),
+    write('|----+----+----+----+----+----+----|'),
+    nl,
+    write('|  1 |  2 |  3 |  4 |  5 |  6 |  7 |'),
+    nl.
+
 
 output_board :-
     board(B),
