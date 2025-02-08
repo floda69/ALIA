@@ -403,7 +403,7 @@ make_move2(computer, P, B, B2) :-
     nl,
     write('Computer is thinking about next move...'),
     player_mark(P, M),
-    minimax(0, B, M, S, U, 4),
+    alpha_beta(0, B, M, S, U, -inf, inf, 5),
     move(B,S,M,B2),
 
     nl,
@@ -412,7 +412,7 @@ make_move2(computer, P, B, B2) :-
     write(M),
     write(' in column '),
     S2 is S mod 7,
-    write(S2),
+    (S2 = 0 -> write("7"); write(S2)),
     write('.')
     .
 
@@ -509,6 +509,41 @@ minimax(D,B,M,S,U,Limit) :-
 
 
 %.......................................
+% alpha_beta
+%.......................................
+
+alpha_beta(D,[E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E], M, S, U, Alpha, Beta, Limit) :-
+    blank_mark(E),
+    random_int_1n(3,S1),
+    S is S1 + 37,
+    !
+    .
+
+
+% Minimax with Alpha-Beta Pruning
+alpha_beta(D, B, M, S, U, Alpha, Beta, Limit) :-
+    D2 is D + 1,
+    moves(B, L),  % Get available moves
+    !,
+    evaluate(D2, B, M, L, S, U, Alpha, Beta, Limit),  % Recursive search with pruning
+    !.
+
+alpha_beta(D, B, M, _, U, _, _, _) :-
+    (M == ' x' -> utility4(B, U); utility4(B, U)).
+
+% Alpha-Beta Pruning Decision
+prune_or_continue(_, _, _, _, S1, U1, S, U, Alpha, Beta, _) :-
+    Alpha >= Beta, !,
+    S is S1,
+    U is U1.  % Prune if Alpha ≥ Beta
+
+prune_or_continue(D, B, M, T, S1, U1, S, U, Alpha, Beta, Limit) :-
+    evaluate(D, B, M, T, S2, U2, Alpha, Beta, Limit),
+    better(D, M, S1, U1, S2, U2, S, U).
+
+
+
+%.......................................
 % best
 %.......................................
 % determines the best move in a given list of moves by recursively calling minimax
@@ -577,18 +612,18 @@ utility3(Board, Utility) :-
 
 
 % Heuristic 4 evaluation function for the Connect 4 board
-utility4(B, Player, Score) :-  
-    matrix_control(B, ' x', CrossCenter1),
-    matrix2_control(B, ' x', CrossCenter2),
-    matrix3_control(B, ' x', CrossCenter3),
-    matrix4_control(B, ' x', CrossCenter4),
-    matrix5_control(B, ' x', CrossCenter5),
-    matrix_control(B, ' o', CircleCenter1),
-    matrix2_control(B, ' o', CircleCenter2),
-    matrix3_control(B, ' o', CircleCenter3),
-    matrix4_control(B, ' o', CircleCenter4),
-    matrix5_control(B, ' x', CircleCenter5),
-    Score is CrossCenter1 + CrossCenter2 + CrossCenter3 + CrossCenter4 + CrossCenter5 - CircleCenter1 - CircleCenter2 - CircleCenter3 - CircleCenter4 - CircleCenter5.
+utility4(B, Score) :-  
+    Matrix = [3,4,5,7,5,4,3,4,6,8,10,8,6,4,5,8,11,13,11,8,5,5,8,11,13,11,8,5,4,6,8,10,8,6,4,3,4,5,7,5,4,3],
+    findall(Value, (
+        between(1, 42, Index),
+        (square(B, Index, ' x') -> 
+            nth1(Index, Matrix, Value);
+            square(B, Index, ' o') -> 
+            nth1(Index, Matrix, V), Value is -V;
+            Value is 0)
+    ), Values),
+    sumlist(Values, Score).
+
 
 
 %====================================================================
@@ -793,6 +828,7 @@ matrix5_control(B, Player, Score) :-
     findall(Index, (between(1, 4, Row), between(2, 6, Col), Index is Row * 7 + Col, square(B, Index, Player)), CenterPieces),
     length(CenterPieces, Score).
 
+
 %====================================================================
 %                 evaluate
 %====================================================================
@@ -802,40 +838,50 @@ evaluate(D, B, M, S, U) :-
     (M == ' x' -> utility(B, U); utility(B, U))  % O utility function then X utility function
     .
 
-evaluate(D,B,M,[S1],S,U,Limit) :- %%% one possible move
-    not(D==Limit),
-    move(B,S1,M,B2),        %%% apply that move to the board,
-    inverse_mark(M,M2),     %%% change player turn
+% Evaluate a single move (base case)
+evaluate(D, B, M, [S1], S, U, Alpha, Beta, Limit) :-
+    not(D == Limit),
+    move(B, S1, M, B2),  % Apply move
+    inverse_mark(M, M2), % Change turn
     !,
-    minimax(D,B2,M2,_S,U,Limit),      %%% recursively search for the utility value of that move,
+    alpha_beta(D, B2, M2, _S, U, Alpha, Beta, Limit),
     S = S1,
-    output_value(D, S, U),
-    !
-    .
+    output_value(D, S, U).
 
-evaluate(Limit,B,M,[S1],S,U,Limit) :- %%% one possible move case occurence limit
+evaluate(Limit,B,M,[S1],S,U,Alpha, Beta, Limit) :- %%% one possible move case occurence limit
     move(B,S1,M,B2),        %%% apply that move to the board,
     evaluate(Limit,B2,M,S1,U),  %%% then evaluate the board position
     S = S1, !
     .
 
-evaluate(Limit,B,M,[S1|T],S,U,Limit) :- %%% multiple possible moves case occurence limit
+evaluate(Limit,B,M,[S1|T],S,U,Alpha, Beta,Limit) :- %%% multiple possible moves case occurence limit
     move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
     evaluate(Limit,B2,M,S1,U1),      %%% then evaluate the board position,
-    evaluate(Limit,B,M,T,S2,U2,Limit),         %%% determine the best move of the remaining moves,
+    evaluate(Limit,B,M,T,S2,U2, Alpha, Beta, Limit),         %%% determine the best move of the remaining moves,
     better(Limit,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
     .
 
-evaluate(D,B,M,[S1|T],S,U,Limit) :-    %%% multiple possible moves
-    not(D==Limit),
-    move(B,S1,M,B2),             %%% apply the first move (in the list) to the board,
-    inverse_mark(M,M2),          %%% change player turn
+% Evaluate multiple possible moves
+evaluate(D, B, M, [S1 | T], S, U, Alpha, Beta, Limit) :-
+    not(D == Limit),
+    move(B, S1, M, B2),
+    inverse_mark(M, M2),
     !,
-    minimax(D,B2,M2,_S,U1,Limit),      %%% recursively search for the utility value of that move,
-    evaluate(D,B,M,T,S2,U2,Limit),     %%% determine the best move of the remaining moves,
-    output_value(D, S1, U1),         
-    better(D,M,S1,U1,S2,U2,S,U)  %%% and choose the better of the two moves (based on their respective utility values)
+    alpha_beta(D, B2, M2, _S, U1, Alpha, Beta, Limit),
+    update_alpha_beta(D, B, M, T, S1, U1, S, U, Alpha, Beta, Limit)
     .
+
+% Updating Alpha and Beta
+update_alpha_beta(D, B, ' x', T, S1, U1, S, U, Alpha, Beta, Limit) :- % Maximizing player
+    NewAlpha is max(Alpha, U1),
+    prune_or_continue(D, B, ' x', T, S1, U1, S, U, NewAlpha, Beta, Limit),
+    output_value(D, S1, U1).
+
+update_alpha_beta(D, B, ' o', T, S1, U1, S, U, Alpha, Beta, Limit) :- % Minimizing player
+    NewBeta is min(Beta, U1),
+    prune_or_continue(D, B, ' o', T, S1, U1, S, U, Alpha, NewBeta, Limit),
+    output_value(D, S1, U1).
+
 
 %.......................................
 % better
