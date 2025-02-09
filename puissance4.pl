@@ -538,6 +538,7 @@ prune_or_continue(_, _, _, _, S1, U1, S, U, Alpha, Beta, _) :-
     U is U1.  % Prune if Alpha ≥ Beta
 
 prune_or_continue(D, B, M, T, S1, U1, S, U, Alpha, Beta, Limit) :-
+    Alpha < Beta,  % Continue if Alpha < Beta
     evaluate(D, B, M, T, S2, U2, Alpha, Beta, Limit),
     better(D, M, S1, U1, S2, U2, S, U).
 
